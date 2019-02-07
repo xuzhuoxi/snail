@@ -1,0 +1,3 @@
+package intfc
+
+const ()

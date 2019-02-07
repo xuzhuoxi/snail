@@ -1,0 +1,61 @@
+{
+	"rpc": [{
+		"name": "route0",
+		"network": "tcp",
+		"addr": "127.0.0.1:40000"
+	}, {
+		"name": "game0",
+		"network": "tcp",
+		"addr": "127.0.0.1:41000"
+	}, {
+		"name": "game1",
+		"network": "tcp",
+		"addr": "127.0.0.1:42000"
+	}
+	],
+	"routes": [{
+		"name": "route0",
+		"service": {
+			"network": "http",
+			"addr": "127.0.0.1:30000"
+		},
+		"module": "route",
+		"log": "route0.log",
+		"rpc": "route0"
+	}
+	],
+	"games": [{
+		"name": "game0",
+		"service": {
+			"network": "tcp",
+			"addr": "127.0.0.1:31000"
+		},
+		"module": "game",
+		"log": "game0.log",
+		"rpc": "game0",
+		"remotes": ["route0"]
+	}, {
+		"name": "game1",
+		"service": {
+			"network": "tcp",
+			"addr": "127.0.0.1:31001"
+		},
+		"module": "game",
+		"log": "game1.log",
+		"rpc": "game1",
+		"remotes": ["route0"]
+	}
+	],
+	"admins": [{
+		"name": "admin0",
+		"service": {
+			"network": "http",
+			"addr": "127.0.0.1:32000"
+		},
+		"module": "admin",
+		"log": "admin0.log",
+		"remotes": ["game0", "game1"]
+	}
+	],
+	"onList": ["route0", "game0", "game1", "admin0"]
+}
