@@ -1,7 +1,7 @@
-package intfc
+package imodule
 
 import (
-	"log"
+	"github.com/xuzhuoxi/util-go/logx"
 )
 
 const (
@@ -20,6 +20,7 @@ func MapRPCHandler(h *RPCHandler, key string, f func(args *RPCArgs, reply *RPCRe
 }
 
 type RPCHandler struct {
+	Log     logx.ILogger
 	handler map[string]func(args *RPCArgs, reply *RPCReply) error
 }
 
@@ -36,12 +37,12 @@ type RPCReply struct {
 }
 
 func (g *RPCHandler) OnRPCCall(args *RPCArgs, reply *RPCReply) error {
-	log.Println("\tOnRPCCall:", args, reply)
+	g.Log.Infoln("\tOnRPCCall:", args, reply)
 	handler, ok := g.handler[args.Cmd]
 	if ok {
 		return handler(args, reply)
 	} else {
-		log.Fatalln("\tRPCHandler Map Error: ", args.Cmd)
+		g.Log.Fatalln("\tRPCHandler Map Error: ", args.Cmd)
 		return nil
 	}
 	return nil

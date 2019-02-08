@@ -1,11 +1,11 @@
 package impl
 
 import (
-	"github.com/xuzhuoxi/snail/module/intfc"
+	"github.com/xuzhuoxi/snail/module/imodule"
 )
 
 type ModuleAdmin struct {
-	intfc.ModuleBase
+	imodule.ModuleBase
 }
 
 func (m *ModuleAdmin) Init() {

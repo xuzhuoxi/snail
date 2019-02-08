@@ -1,16 +1,16 @@
 package impl
 
 import (
-	"github.com/xuzhuoxi/snail/module/intfc"
+	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/util-go/encodingx"
 	"github.com/xuzhuoxi/util-go/netx"
 	"time"
 )
 
 type ModuleGame struct {
-	intfc.ModuleBase
+	imodule.ModuleBase
 	remoteMap map[string]netx.IRPCClient
-	state     intfc.GameServerState
+	state     imodule.GameServerState
 	starting  int64
 
 	codecs *encodingx.GobCodecs

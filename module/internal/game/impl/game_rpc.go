@@ -2,7 +2,7 @@ package impl
 
 import (
 	"github.com/xuzhuoxi/snail/conf"
-	"github.com/xuzhuoxi/snail/module/intfc"
+	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/util-go/netx"
 	"log"
 	"time"
@@ -19,13 +19,13 @@ Conn:
 }
 
 func checkAndConnRemotes(m *ModuleGame) {
-	for _, name := range m.GetConfig().Remotes {
+	for _, name := range m.GetConfig().ServiceList {
 		checkAndConnRemote(m, name)
 	}
 }
 
 func checkAndConnRemote(m *ModuleGame, name string) {
-	service, ok := conf.Config.GetRpcInfo(name)
+	service, ok := conf.GetServiceConf(name)
 	if !ok {
 		log.Fatalln(m.GetName(), ": Remotes Error At:", name)
 		return
@@ -49,7 +49,7 @@ func conn2Service(m *ModuleGame, name string, network string, addr string) {
 }
 
 func notifyAllRemote(m *ModuleGame, f func(m *ModuleGame, to string)) {
-	for _, remoteName := range m.GetConfig().Remotes {
+	for _, remoteName := range m.GetConfig().ServiceList {
 		client, ok := m.remoteMap[remoteName]
 		if ok && client.IsConnected() {
 			f(m, remoteName)
@@ -59,22 +59,22 @@ func notifyAllRemote(m *ModuleGame, f func(m *ModuleGame, to string)) {
 
 func notifyConnected(m *ModuleGame, to string) {
 	toClient := m.remoteMap[to]
-	args := &intfc.RPCArgs{From: m.GetName(), Cmd: intfc.CmdRoute_OnConnected}
-	reply := &intfc.RPCReply{}
-	toClient.Call(intfc.ServiceMethod_OnRPCCall, args, reply)
+	args := &imodule.RPCArgs{From: m.GetName(), Cmd: imodule.CmdRoute_OnConnected}
+	reply := &imodule.RPCReply{}
+	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
 }
 
 func notifyDisConnected(m *ModuleGame, to string) {
 	toClient := m.remoteMap[to]
-	args := &intfc.RPCArgs{From: m.GetName(), Cmd: intfc.CmdRoute_OnDisconnected}
-	reply := &intfc.RPCReply{}
-	toClient.Call(intfc.ServiceMethod_OnRPCCall, args, reply)
+	args := &imodule.RPCArgs{From: m.GetName(), Cmd: imodule.CmdRoute_OnDisconnected}
+	reply := &imodule.RPCReply{}
+	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
 }
 
 func notifyState(m *ModuleGame, to string) {
 	toClient := m.remoteMap[to]
 	data := m.codecs.Encode(m.state)
-	args := &intfc.RPCArgs{From: m.GetName(), Cmd: intfc.CmdRoute_UpdateState, Data: data}
-	reply := &intfc.RPCReply{}
-	toClient.Call(intfc.ServiceMethod_OnRPCCall, args, reply)
+	args := &imodule.RPCArgs{From: m.GetName(), Cmd: imodule.CmdRoute_UpdateState, Data: data}
+	reply := &imodule.RPCReply{}
+	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
 }

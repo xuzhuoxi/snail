@@ -1,9 +1,10 @@
-package module
+package internal
 
 import (
 	"flag"
 	"fmt"
-	"github.com/xuzhuoxi/snail/module/mods/game/intfc"
+	intfc2 "github.com/xuzhuoxi/snail/module/imodule"
+	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
 	"strings"
 )
 
@@ -21,13 +22,13 @@ const (
 //list -r=true(false) -m=Module
 func CmdList(cmdArgs []string) {
 	flagMap, ok := parseCmdArgs(cmdArgs, 2, "r", "m")
-	var list []*internal
+	var list []*internalMod
 	if ok {
 		isRunning := flagMap["r"]
 		moduleName := flagMap["m"]
-		var eachFunc = func(i *internal) bool {
+		var eachFunc = func(i *internalMod) bool {
 			m := moduleName == "" || moduleName == i.mod.GetConfig().Module
-			r := isRunning == "" || (isRunning == "false" || isRunning == "0") != i.running
+			r := isRunning == "" || (isRunning == "false" || isRunning == "0") != i.running()
 			return m && r
 		}
 		list = foreach(mods, eachFunc)
@@ -69,12 +70,12 @@ func CmdStart(cmdArgs []string) {
 
 //login -g=Name
 func CmdGameLogin(cmdArgs []string) {
-	cmdLogInOut(cmdArgs, true)
+	cmdLogin(cmdArgs, true)
 }
 
 //logout -g=Name
 func CmdGameLogout(cmdArgs []string) {
-	cmdLogInOut(cmdArgs, false)
+	cmdLogin(cmdArgs, false)
 
 }
 
@@ -108,15 +109,15 @@ func cmdSwitchModule(cmdArgs []string, on bool) {
 		name := flagMap["n"]
 		module := flagMap["m"]
 		if "" == name {
-			var eachFunc = func(i *internal) bool {
-				return on != i.running && i.mod.GetModule() == module
+			var eachFunc = func(i *internalMod) bool {
+				return on != i.running() && i.mod.GetModule() == module
 			}
 			list := foreach(mods, eachFunc)
 			fmt.Println("list:", list)
 			if on {
-				startModules(list)
+				startModules(list...)
 			} else {
-				stopModules(list)
+				stopModules(list...)
 			}
 		} else {
 			mod, ok := modsMap[name]
@@ -124,7 +125,7 @@ func cmdSwitchModule(cmdArgs []string, on bool) {
 				fmt.Println("Module \"" + name + "\" does not exist.")
 				return
 			}
-			if mod.running == on || (mod.mod.GetModule() != module && module != "") {
+			if mod.running() == on || (mod.mod.GetModule() != module && module != "") {
 				fmt.Println(mod)
 				return
 			}
@@ -140,16 +141,16 @@ func cmdSwitchModule(cmdArgs []string, on bool) {
 }
 
 //login -g=Name
-func cmdLogInOut(cmdArgs []string, login bool) {
+func cmdLogin(cmdArgs []string, login bool) {
 	flagMap, ok := parseCmdArgs(cmdArgs, 2, "g")
 	if ok {
 		gameName := flagMap["g"]
 		mod, okm := modsMap[gameName]
-		if !okm || mod.mod.GetModule() != ModuleNameGame {
+		if !okm || mod.mod.GetModule() != string(intfc2.ModGame) {
 			fmt.Println(strings.Replace("Game module \"${name}\" does not exist!", "${name}", gameName, -1))
 			return
 		}
-		if !mod.running {
+		if !mod.running() {
 			fmt.Println(strings.Replace("Game module \"${name}\" is not running!", "${name}", gameName, -1))
 			return
 		}

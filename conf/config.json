@@ -1,61 +1,41 @@
 {
-	"rpc": [{
-		"name": "route0",
-		"network": "tcp",
-		"addr": "127.0.0.1:40000"
-	}, {
-		"name": "game0",
-		"network": "tcp",
-		"addr": "127.0.0.1:41000"
-	}, {
-		"name": "game1",
-		"network": "tcp",
-		"addr": "127.0.0.1:42000"
-	}
-	],
-	"routes": [{
-		"name": "route0",
-		"service": {
-			"network": "http",
-			"addr": "127.0.0.1:30000"
-		},
-		"module": "route",
-		"log": "route0.log",
-		"rpc": "route0"
-	}
-	],
-	"games": [{
-		"name": "game0",
-		"service": {
-			"network": "tcp",
-			"addr": "127.0.0.1:31000"
-		},
-		"module": "game",
-		"log": "game0.log",
-		"rpc": "game0",
-		"remotes": ["route0"]
-	}, {
-		"name": "game1",
-		"service": {
-			"network": "tcp",
-			"addr": "127.0.0.1:31001"
-		},
-		"module": "game",
-		"log": "game1.log",
-		"rpc": "game1",
-		"remotes": ["route0"]
-	}
-	],
-	"admins": [{
-		"name": "admin0",
-		"service": {
-			"network": "http",
-			"addr": "127.0.0.1:32000"
-		},
-		"module": "admin",
-		"log": "admin0.log",
-		"remotes": ["game0", "game1"]
-	}
-	],
-	"onList": ["route0", "game0", "game1", "admin0"]
+  "services": [
+    {"name": "rpc_route0", "network": "tcp", "addr": "127.0.0.1:40000"},
+    {"name": "rpc_game0", "network": "tcp", "addr": "127.0.0.1:41000"},
+    {"name": "rpc_game1", "network": "tcp", "addr": "127.0.0.1:42000"},
+    {"name": "out_route0", "network": "http", "addr": "127.0.0.1:30000"},
+    {"name": "out_game0", "network": "tcp", "addr": "127.0.0.1:31000"},
+    {"name": "out_game1", "network": "tcp", "addr": "127.0.0.1:32000"}
+  ],
+  "routes": [
+    {
+      "name": "route0",
+      "module": "route",
+      "rpc": ["rpc_route0"],
+      "service": ["out_route0"],
+      "log": "route0.log"
+    }
+  ],
+  "games": [
+    {
+      "name": "game0", "module": "game",
+      "rpc": ["rpc_game0"],
+      "service": ["out_game0"],
+      "log": "game0.log"
+    }, {
+      "name": "game1", "module": "game",
+      "rpc": ["rpc_game1"],
+      "service": ["out_game1"],
+      "log": "game1.log"
+    }
+  ],
+  "admins": [
+    {
+      "name": "admin0", "module": "admin",
+      "rpc": ["rpc_admin0"],
+      "service": ["out_admin0"],
+      "log": "admin0.log"
+    }
+  ],
+  "onList": ["route0", "game0", "game1", "admin0"]
 }
