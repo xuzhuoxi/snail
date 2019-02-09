@@ -6,11 +6,13 @@ import (
 	"github.com/xuzhuoxi/util-go/encodingx"
 	"github.com/xuzhuoxi/util-go/logx"
 	"github.com/xuzhuoxi/util-go/netx"
+	"net/http"
+	"time"
 )
 
 type ModuleRoute struct {
 	imodule.ModuleBase //内嵌
-	gameMap            map[string]imodule.GameServerState
+	gameMap            map[string]imodule.ServiceState
 	//Service
 	httpServer netx.IHttpServer
 	rpcServer  netx.IRPCServer
@@ -19,13 +21,15 @@ type ModuleRoute struct {
 }
 
 func (m *ModuleRoute) Init() {
-	m.gameMap = make(map[string]imodule.GameServerState)
+	m.gameMap = make(map[string]imodule.ServiceState)
 	m.codecs = encodingx.NewCodecs()
-	m.initRPCServices()
-	m.initForeignServices()
+
+	time.Now().Unix()
 }
 
 func (m *ModuleRoute) Run() {
+	m.runRPCServices()
+	m.runForeignServices()
 }
 
 func (m *ModuleRoute) Save() {
@@ -33,6 +37,8 @@ func (m *ModuleRoute) Save() {
 }
 
 func (m *ModuleRoute) OnDestroy() {
+	m.httpServer.StopServer()
+	m.rpcServer.StopServer()
 }
 
 func (m *ModuleRoute) Destroy() {
@@ -40,12 +46,13 @@ func (m *ModuleRoute) Destroy() {
 
 //-----------------------------------------
 
-func (m *ModuleRoute) initRPCServices() {
-	rpcName := m.GetConfig().RpcList[0]
+func (m *ModuleRoute) runRPCServices() {
+	objConf := m.GetConfig()
+	rpcName := objConf.RpcList[0]
 	if "" == rpcName {
 		return
 	}
-	rpc, ok := conf.GetServiceConf(rpcName)
+	rpc, ok := objConf.GetServiceConf(rpcName)
 	if !ok {
 		panic("RPC Undefined :" + rpcName)
 	}
@@ -60,12 +67,12 @@ func (m *ModuleRoute) initRPCServices() {
 	imodule.MapRPCHandler(rpcHandler, imodule.CmdRoute_OnDisconnected, m.onDisconnected)
 	imodule.MapRPCHandler(rpcHandler, imodule.CmdRoute_UpdateState, m.onUpdateState)
 	go func() {
-		m.Log.Infoln(m.GetName(), ": start rpc server......")
+		m.Log.Infoln(m.GetName(), ":start rpc server at:"+rpc.Addr)
 		m.rpcServer.StartServer(rpc.Addr)
 	}()
 }
 
-func (m *ModuleRoute) initForeignServices() {
+func (m *ModuleRoute) runForeignServices() {
 	serviceName := m.GetConfig().ServiceList[0]
 	service, ok := conf.GetServiceConf(serviceName)
 	if !ok {
@@ -73,7 +80,8 @@ func (m *ModuleRoute) initForeignServices() {
 	}
 	m.httpServer = netx.NewHttpServer()
 	go func() {
-		m.Log.Infoln(m.GetName(), ": start http server......")
+		m.Log.Infoln(m.GetName(), ":start http server at:"+service.Addr)
+		m.httpServer.MapFunc("/route", m.onQueryRoute)
 		m.httpServer.StartServer(service.Addr)
 	}()
 }
@@ -91,9 +99,15 @@ func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCRe
 }
 
 func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
-	var state imodule.GameServerState
+	var state imodule.ServiceState
 	m.codecs.Decoder(args.Data, &state)
 	m.gameMap[args.From] = state
 	m.Log.Infoln(m.GetName(), ": onUpdateState:", state)
 	return nil
+}
+
+//格式:
+func (m *ModuleRoute) onQueryRoute(w http.ResponseWriter, r *http.Request) {
+	tm := time.Now().Format(time.RFC1123)
+	w.Write([]byte("Route: " + tm))
 }

@@ -3,7 +3,6 @@ package conf
 import (
 	"encoding/json"
 	"flag"
-	"github.com/xuzhuoxi/snail/snail"
 	"io/ioutil"
 	"log"
 	"os"
@@ -22,11 +21,17 @@ type ObjectConf struct {
 	RpcList     []string `json:"rpc,omitempty"`
 	ServiceList []string `json:"service,omitempty"`
 	Log         string   `json:"log,omitempty"`
+
+	conf *Conf
 }
 
 func (oc ObjectConf) LogDir() string {
 	basePath := filepath.Dir(os.Args[0])
 	return basePath + "/log/"
+}
+
+func (c ObjectConf) GetServiceConf(name string) (*ServiceConf, bool) {
+	return c.conf.GetServiceConf(name)
 }
 
 type Conf struct {
@@ -36,8 +41,48 @@ type Conf struct {
 	Games    []ObjectConf  `json:"games,omitempty"`
 	OnList   []string      `json:"onList"`
 
-	mapService map[string]*ServiceConf
-	mapObject  map[string]*ObjectConf
+	mapService map[string]ServiceConf
+	mapObject  map[string]ObjectConf
+}
+
+func (c *Conf) GetServiceConf(name string) (*ServiceConf, bool) {
+	rs, has := c.mapService[name]
+	if has {
+		return &rs, true
+	}
+	return nil, false
+}
+
+func (c *Conf) GetConfByName(name string) (*ObjectConf, bool) {
+	val, has := c.mapObject[name]
+	if has {
+		return &val, true
+	}
+	return nil, false
+}
+
+func (c *Conf) handleData() {
+	c.mapService = make(map[string]ServiceConf)
+	for _, val := range c.Services {
+		c.mapService[val.Name] = val
+	}
+	objectToMap := func(m map[string]ObjectConf, objects []ObjectConf) {
+		if len(objects) == 0 {
+			return
+		}
+		for _, val := range objects {
+			_, has := m[val.Name]
+			if has {
+				panic("ObjectName Repeat!")
+			}
+			val.conf = c
+			m[val.Name] = val
+		}
+	}
+	c.mapObject = make(map[string]ObjectConf)
+	objectToMap(c.mapObject, c.Routes)
+	objectToMap(c.mapObject, c.Games)
+	objectToMap(c.mapObject, c.Admins)
 }
 
 var DefaultConfig *Conf
@@ -56,46 +101,14 @@ func ParseConfig(configName string) *Conf {
 	}
 	cfg := &Conf{}
 	json.Unmarshal(cfgBody, cfg)
-	handleData(cfg)
+	cfg.handleData()
 	return cfg
 }
 
 func GetServiceConf(name string) (*ServiceConf, bool) {
-	rs, ok := DefaultConfig.mapService[name]
-	return rs, ok
+	return DefaultConfig.GetServiceConf(name)
 }
 
-func GetConfByName(name string) (ObjectConf, error) {
-	arr := append(append(DefaultConfig.Routes, DefaultConfig.Admins...), DefaultConfig.Games...)
-	for _, val := range arr {
-		if val.Name == name {
-			return val, nil
-		}
-	}
-	return ObjectConf{}, &snail.Error{"Error"}
-}
-
-//private-----------------------
-
-func handleData(c *Conf) {
-	c.mapService = make(map[string]*ServiceConf)
-	for _, val := range c.Services {
-		c.mapService[val.Name] = &val
-	}
-	objectToMap := func(m map[string]*ObjectConf, objects []ObjectConf) {
-		if len(objects) == 0 {
-			return
-		}
-		for _, val := range objects {
-			_, has := m[val.Name]
-			if has {
-				panic("ObjectName Repeat!")
-			}
-			m[val.Name] = &val
-		}
-	}
-	c.mapObject = make(map[string]*ObjectConf)
-	objectToMap(c.mapObject, c.Routes)
-	objectToMap(c.mapObject, c.Games)
-	objectToMap(c.mapObject, c.Admins)
+func GetConfByName(name string) (*ObjectConf, bool) {
+	return DefaultConfig.GetConfByName(name)
 }

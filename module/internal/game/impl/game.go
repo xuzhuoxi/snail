@@ -4,14 +4,12 @@ import (
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/util-go/encodingx"
 	"github.com/xuzhuoxi/util-go/netx"
-	"time"
 )
 
 type ModuleGame struct {
 	imodule.ModuleBase
 	remoteMap map[string]netx.IRPCClient
-	state     imodule.GameServerState
-	starting  int64
+	state     *imodule.ServiceStateDetail
 
 	codecs *encodingx.GobCodecs
 }
@@ -19,10 +17,11 @@ type ModuleGame struct {
 func (m *ModuleGame) Init() {
 	m.codecs = encodingx.NewCodecs()
 	m.remoteMap = make(map[string]netx.IRPCClient)
+	m.state = imodule.NewServiceState(imodule.DefaultStatsInterval)
 }
 
 func (m *ModuleGame) Run() {
-	m.starting = time.Now().UnixNano()
+	m.state.Start()
 	go CheckRPC(m)
 }
 

@@ -121,16 +121,16 @@ func ListInfo(state state) []string {
 //-------------------------------------
 
 func newInternal(name string) (*internalMod, error) {
-	c, err := conf.GetConfByName(name)
-	if nil != err {
-		return nil, err
+	c, has := conf.GetConfByName(name)
+	if !has {
+		return nil, errors.New("No Module Config :" + name)
 	}
 	m := imodule.Module(c.Module)
 	if !m.Available() {
-		return nil, errors.New("Module Undefind:" + string(m))
+		return nil, errors.New("Module Undefined:" + string(m))
 	}
 	rs := &internalMod{name: name, mod: m.New()}
-	rs.mod.SetConfig(c)
+	rs.mod.SetConfig(*c)
 	return rs, nil
 }
 
