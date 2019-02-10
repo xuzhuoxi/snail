@@ -20,8 +20,8 @@ type ServiceState struct {
 	Weight float64
 }
 
-func NewServiceState(statsInterval int64) *ServiceStateDetail {
-	return &ServiceStateDetail{statsInterval: statsInterval}
+func NewServiceState(name string, statsInterval int64) *ServiceStateDetail {
+	return &ServiceStateDetail{Name: name, statsInterval: statsInterval}
 }
 
 type ServiceStateDetail struct {
@@ -115,8 +115,12 @@ func (s *ServiceStateDetail) statsReset() {
 //当前统计的服务权重(连接数*统计时间/统计响应时间)
 //越大代表压力越大
 func (s ServiceStateDetail) StatsWeight() float64 {
-	pass := s.getStatsPass()
-	return float64(s.LinkCount) * float64(pass) / float64(s.StatsRespUnixNano)
+	if 0 == s.StatsRespUnixNano {
+		return float64(s.LinkCount)
+	} else {
+		pass := s.getStatsPass()
+		return float64(s.LinkCount) * float64(pass) / float64(s.StatsRespUnixNano)
+	}
 }
 
 //统计时间段的请求密度(次数/秒)

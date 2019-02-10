@@ -16,10 +16,11 @@ type ServiceConf struct {
 }
 
 type ObjectConf struct {
-	Name        string   `json:"name"`
-	Module      string   `json:"module"`
+	Id          string   `json:"id"`
+	ModuleName  string   `json:"module"`
 	RpcList     []string `json:"rpc,omitempty"`
 	ServiceList []string `json:"service,omitempty"`
+	Remotes     []string `json:"remotes,omitempty"`
 	Log         string   `json:"log,omitempty"`
 
 	conf *Conf
@@ -35,7 +36,7 @@ func (c ObjectConf) GetServiceConf(name string) (*ServiceConf, bool) {
 }
 
 type Conf struct {
-	Services []ServiceConf `json:"services,omitempty`
+	Services []ServiceConf `json:"services,omitempty"`
 	Routes   []ObjectConf  `json:"routes,omitempty"`
 	Admins   []ObjectConf  `json:"admins,omitempty"`
 	Games    []ObjectConf  `json:"games,omitempty"`
@@ -53,8 +54,8 @@ func (c *Conf) GetServiceConf(name string) (*ServiceConf, bool) {
 	return nil, false
 }
 
-func (c *Conf) GetConfByName(name string) (*ObjectConf, bool) {
-	val, has := c.mapObject[name]
+func (c *Conf) GetObjectById(id string) (*ObjectConf, bool) {
+	val, has := c.mapObject[id]
 	if has {
 		return &val, true
 	}
@@ -71,12 +72,12 @@ func (c *Conf) handleData() {
 			return
 		}
 		for _, val := range objects {
-			_, has := m[val.Name]
+			_, has := m[val.Id]
 			if has {
-				panic("ObjectName Repeat!")
+				panic("Id Repeat!")
 			}
 			val.conf = c
-			m[val.Name] = val
+			m[val.Id] = val
 		}
 	}
 	c.mapObject = make(map[string]ObjectConf)
@@ -109,6 +110,6 @@ func GetServiceConf(name string) (*ServiceConf, bool) {
 	return DefaultConfig.GetServiceConf(name)
 }
 
-func GetConfByName(name string) (*ObjectConf, bool) {
-	return DefaultConfig.GetConfByName(name)
+func GetObjectById(name string) (*ObjectConf, bool) {
+	return DefaultConfig.GetObjectById(name)
 }

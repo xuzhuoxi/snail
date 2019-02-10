@@ -8,16 +8,18 @@ import (
 
 type ModuleGame struct {
 	imodule.ModuleBase
-	remoteMap map[string]netx.IRPCClient
-	state     *imodule.ServiceStateDetail
+	rpcRemoteMap map[string]netx.IRPCClient
+	state        *imodule.ServiceStateDetail
 
-	codecs *encodingx.GobCodecs
+	gobBuffEncoder encodingx.IGobBuffEncoder
+	gobBuffDecoder encodingx.IGobBuffDecoder
 }
 
 func (m *ModuleGame) Init() {
-	m.codecs = encodingx.NewCodecs()
-	m.remoteMap = make(map[string]netx.IRPCClient)
-	m.state = imodule.NewServiceState(imodule.DefaultStatsInterval)
+	m.gobBuffEncoder = encodingx.NewGobBuffEncoder()
+	m.gobBuffDecoder = encodingx.NewGobBuffDecoder()
+	m.rpcRemoteMap = make(map[string]netx.IRPCClient)
+	m.state = imodule.NewServiceState(m.GetId(), imodule.DefaultStatsInterval)
 }
 
 func (m *ModuleGame) Run() {

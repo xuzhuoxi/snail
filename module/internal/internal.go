@@ -37,7 +37,7 @@ func (i *internalMod) running() bool {
 }
 
 func (i *internalMod) infoStr() string {
-	return i.name + "(state=" + stateDesc[i.state] + ",module=" + i.mod.GetConfig().Module + ")"
+	return i.name + "(state=" + stateDesc[i.state] + ",module=" + i.mod.GetConfig().ModuleName + ")"
 }
 
 var (
@@ -63,7 +63,7 @@ func Start(name ...string) error {
 	list := []*internalMod{}
 	for _, n := range name {
 		if Running(n) {
-			logx.Warnln("Module " + n + "is running!")
+			logx.Warnln("ModuleName " + n + "is running!")
 			continue
 		}
 		internal, err := newInternal(n)
@@ -82,7 +82,7 @@ func Stop(name ...string) {
 	var list []*internalMod
 	for _, n := range name {
 		if !Running(n) {
-			logx.Warnln("Module " + n + "is not running!")
+			logx.Warnln("ModuleName " + n + "is not running!")
 			continue
 		}
 		list = append(list, modsMap[n])
@@ -121,15 +121,15 @@ func ListInfo(state state) []string {
 //-------------------------------------
 
 func newInternal(name string) (*internalMod, error) {
-	c, has := conf.GetConfByName(name)
+	c, has := conf.GetObjectById(name)
 	if !has {
-		return nil, errors.New("No Module Config :" + name)
+		return nil, errors.New("No ModuleName Config :" + name)
 	}
-	m := imodule.Module(c.Module)
+	m := imodule.ModuleName(c.ModuleName)
 	if !m.Available() {
-		return nil, errors.New("Module Undefined:" + string(m))
+		return nil, errors.New("ModuleName Undefined:" + string(m))
 	}
-	rs := &internalMod{name: name, mod: m.New()}
+	rs := &internalMod{name: name, mod: m.NewModule()}
 	rs.mod.SetConfig(*c)
 	return rs, nil
 }

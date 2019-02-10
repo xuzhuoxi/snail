@@ -17,8 +17,8 @@ type IModule interface {
 }
 
 type IBaseModule interface {
-	GetModule() string
-	GetName() string
+	GetId() string
+	GetModuleName() string
 	GetConfig() conf.ObjectConf
 	SetConfig(config conf.ObjectConf)
 	GetLogger() logx.ILogger
@@ -31,12 +31,12 @@ type ModuleBase struct {
 	Log logx.ILogger
 }
 
-func (m *ModuleBase) GetModule() string {
-	return m.cfg.Module
+func (m *ModuleBase) GetId() string {
+	return m.cfg.Id
 }
 
-func (m *ModuleBase) GetName() string {
-	return m.cfg.Name
+func (m *ModuleBase) GetModuleName() string {
+	return m.cfg.ModuleName
 }
 
 func (m *ModuleBase) GetConfig() conf.ObjectConf {
@@ -60,41 +60,41 @@ func (m *ModuleBase) updateLog() {
 	}
 	fileName, extName := osxu.SplitFileName(logName)
 	newLog := logx.NewLogger()
-	newLog.SetPrefix("[" + m.cfg.Name + "] ")
+	newLog.SetPrefix("[" + m.cfg.Id + "] ")
 	newLog.SetConfig(logx.LogConfig{Type: logx.TypeConsole, Level: logx.LevelAll})
 	newLog.SetConfig(logx.LogConfig{Type: logx.TypeDailyFile, Level: logx.LevelAll, FileDir: m.cfg.LogDir(), FileName: fileName, FileExtName: "." + extName})
 	m.Log = newLog
 }
 
-//Module--------------------------------------
+//ModuleName--------------------------------------
 
 type ModuleConstructor func() IModule
 
-type Module string
+type ModuleName string
 
 const (
-	ModRoute Module = "route"
-	ModGame  Module = "game"
-	ModAdmin Module = "admin"
+	ModRoute ModuleName = "route"
+	ModGame  ModuleName = "game"
+	ModAdmin ModuleName = "admin"
 )
 
-var moduleMap = make(map[Module]ModuleConstructor)
+var moduleMap = make(map[ModuleName]ModuleConstructor)
 
-func (m Module) New() IModule {
+func (m ModuleName) NewModule() IModule {
 	if !m.Available() {
-		panic("No Such Module:" + m)
+		panic("No Such ModuleName:" + m)
 	}
 	return moduleMap[m]()
 }
 
-func (m Module) Available() bool {
+func (m ModuleName) Available() bool {
 	c, ok := moduleMap[m]
 	return ok || nil != c
 }
 
-func RegisterModule(m Module, constructor ModuleConstructor) {
+func RegisterModule(m ModuleName, constructor ModuleConstructor) {
 	if m.Available() {
-		panic("Repeat Module Constructor:" + m)
+		panic("Repeat ModuleName Constructor:" + m)
 	}
 	moduleMap[m] = constructor
 }

@@ -19,7 +19,7 @@ const (
 )
 
 //list
-//list -r=true(false) -m=Module
+//list -r=true(false) -m=ModuleName
 func CmdList(cmdArgs []string) {
 	flagMap, ok := parseCmdArgs(cmdArgs, 2, "r", "m")
 	var list []*internalMod
@@ -27,7 +27,7 @@ func CmdList(cmdArgs []string) {
 		isRunning := flagMap["r"]
 		moduleName := flagMap["m"]
 		var eachFunc = func(i *internalMod) bool {
-			m := moduleName == "" || moduleName == i.mod.GetConfig().Module
+			m := moduleName == "" || moduleName == i.mod.GetConfig().ModuleName
 			r := isRunning == "" || (isRunning == "false" || isRunning == "0") != i.running()
 			return m && r
 		}
@@ -49,20 +49,20 @@ func CmdInfo(cmdArgs []string) {
 		}
 		mod, ok := modsMap[name]
 		if !ok {
-			fmt.Println("Module \"" + name + "\" does not exist.")
+			fmt.Println("ModuleName \"" + name + "\" does not exist.")
 			return
 		}
 		fmt.Println(mod)
 	}
 }
 
-//stop -m=Module
+//stop -m=ModuleName
 //stop -n=Name
 func CmdStop(cmdArgs []string) {
 	cmdSwitchModule(cmdArgs, false)
 }
 
-//start -m=Module
+//start -m=ModuleName
 //start -n=Name
 func CmdStart(cmdArgs []string) {
 	cmdSwitchModule(cmdArgs, true)
@@ -110,7 +110,7 @@ func cmdSwitchModule(cmdArgs []string, on bool) {
 		module := flagMap["m"]
 		if "" == name {
 			var eachFunc = func(i *internalMod) bool {
-				return on != i.running() && i.mod.GetModule() == module
+				return on != i.running() && i.mod.GetModuleName() == module
 			}
 			list := foreach(mods, eachFunc)
 			fmt.Println("list:", list)
@@ -122,10 +122,10 @@ func cmdSwitchModule(cmdArgs []string, on bool) {
 		} else {
 			mod, ok := modsMap[name]
 			if !ok {
-				fmt.Println("Module \"" + name + "\" does not exist.")
+				fmt.Println("ModuleName \"" + name + "\" does not exist.")
 				return
 			}
-			if mod.running() == on || (mod.mod.GetModule() != module && module != "") {
+			if mod.running() == on || (mod.mod.GetModuleName() != module && module != "") {
 				fmt.Println(mod)
 				return
 			}
@@ -146,7 +146,7 @@ func cmdLogin(cmdArgs []string, login bool) {
 	if ok {
 		gameName := flagMap["g"]
 		mod, okm := modsMap[gameName]
-		if !okm || mod.mod.GetModule() != string(intfc2.ModGame) {
+		if !okm || mod.mod.GetModuleName() != string(intfc2.ModGame) {
 			fmt.Println(strings.Replace("Game module \"${name}\" does not exist!", "${name}", gameName, -1))
 			return
 		}

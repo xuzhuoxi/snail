@@ -37,7 +37,7 @@ type RPCReply struct {
 }
 
 func (g *RPCHandler) OnRPCCall(args *RPCArgs, reply *RPCReply) error {
-	g.Log.Infoln("\tOnRPCCall:", args, reply)
+	//g.Log.Infoln("\tOnRPCCall:", args, reply)
 	handler, ok := g.handler[args.Cmd]
 	if ok {
 		return handler(args, reply)

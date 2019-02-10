@@ -7,24 +7,25 @@ import (
 	"github.com/xuzhuoxi/util-go/logx"
 	"github.com/xuzhuoxi/util-go/netx"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type ModuleRoute struct {
 	imodule.ModuleBase //内嵌
-	gameMap            map[string]imodule.ServiceState
+	gameCollection     iCollection
 	//Service
 	httpServer netx.IHttpServer
 	rpcServer  netx.IRPCServer
 
-	codecs *encodingx.GobCodecs
+	gobBuffEncoder encodingx.IGobBuffEncoder
+	gobBuffDecoder encodingx.IGobBuffDecoder
 }
 
 func (m *ModuleRoute) Init() {
-	m.gameMap = make(map[string]imodule.ServiceState)
-	m.codecs = encodingx.NewCodecs()
-
-	time.Now().Unix()
+	m.gameCollection = newCollection()
+	m.gobBuffEncoder = encodingx.NewGobBuffEncoder()
+	m.gobBuffDecoder = encodingx.NewGobBuffDecoder()
 }
 
 func (m *ModuleRoute) Run() {
@@ -67,7 +68,7 @@ func (m *ModuleRoute) runRPCServices() {
 	imodule.MapRPCHandler(rpcHandler, imodule.CmdRoute_OnDisconnected, m.onDisconnected)
 	imodule.MapRPCHandler(rpcHandler, imodule.CmdRoute_UpdateState, m.onUpdateState)
 	go func() {
-		m.Log.Infoln(m.GetName(), ":start rpc server at:"+rpc.Addr)
+		m.Log.Infoln(m.GetId(), ":start rpc server at:"+rpc.Addr)
 		m.rpcServer.StartServer(rpc.Addr)
 	}()
 }
@@ -80,34 +81,41 @@ func (m *ModuleRoute) runForeignServices() {
 	}
 	m.httpServer = netx.NewHttpServer()
 	go func() {
-		m.Log.Infoln(m.GetName(), ":start http server at:"+service.Addr)
-		m.httpServer.MapFunc("/route", m.onQueryRoute)
+		m.Log.Infoln(m.GetId(), ":start http server at:"+service.Addr)
+		m.httpServer.MapFunc("/route", func(w http.ResponseWriter, r *http.Request) { m.onQueryRoute(w, r) })
 		m.httpServer.StartServer(service.Addr)
 	}()
 }
 
 func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	name := args.From
-	m.Log.Infoln(m.GetName(), ": onConnected:", name)
+	m.gobBuffDecoder.DecodedBytes(args.Data)
+	var module imodule.ModuleName
+	var link conf.ServiceConf
+	var state imodule.ServiceState
+	m.gobBuffDecoder.DecodeFromBuff(&module, &link, &state)
+	server := server{Id: state.Name, ModuleName: module, Link: link, State: state, lastTimestamp: time.Now().UnixNano()}
+	m.gameCollection.InitServer(server)
+	m.Log.Infoln(m.GetId(), ": onConnected:", name, server)
 	return nil
 }
 
 func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	name := args.From
-	m.Log.Infoln(m.GetName(), ": onDisconnected:", name)
+	m.Log.Infoln(m.GetId(), ": onDisconnected:", name)
 	return nil
 }
 
 func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
+	m.gobBuffDecoder.DecodedBytes(args.Data)
 	var state imodule.ServiceState
-	m.codecs.Decoder(args.Data, &state)
-	m.gameMap[args.From] = state
-	m.Log.Infoln(m.GetName(), ": onUpdateState:", state)
+	m.gobBuffDecoder.DecodeFromBuff(&state)
+	m.gameCollection.UpdateServerState(state)
+	m.Log.Infoln(m.GetId(), ": onUpdateState:", state)
 	return nil
 }
 
-//格式:
 func (m *ModuleRoute) onQueryRoute(w http.ResponseWriter, r *http.Request) {
-	tm := time.Now().Format(time.RFC1123)
-	w.Write([]byte("Route: " + tm))
+	m.Log.Infoln("onQueryRoute:", len(m.gameCollection.GetServers(imodule.ModGame)))
+	w.Write([]byte(strconv.Itoa(len(m.gameCollection.GetServers(imodule.ModGame)))))
 }

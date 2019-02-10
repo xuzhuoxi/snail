@@ -1,5 +1,7 @@
 package intfc
 
+import "github.com/xuzhuoxi/snail/module/imodule"
+
 type ILoginServer interface {
 	//登录
 	Login()
@@ -12,4 +14,6 @@ type IGameStatus interface {
 	GetPassTime() int64
 	//服务器状态系数
 	GetStatePriority() float64
+	//转化为简单的状态
+	ToSimpleState() imodule.ServiceState
 }
