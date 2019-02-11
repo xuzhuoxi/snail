@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"encoding/binary"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/util-go/encodingx"
@@ -10,6 +11,8 @@ import (
 	"strconv"
 	"time"
 )
+
+var GobOrder = binary.BigEndian
 
 type ModuleRoute struct {
 	imodule.ModuleBase //内嵌
@@ -24,8 +27,8 @@ type ModuleRoute struct {
 
 func (m *ModuleRoute) Init() {
 	m.gameCollection = newCollection()
-	m.gobBuffEncoder = encodingx.NewGobBuffEncoder()
-	m.gobBuffDecoder = encodingx.NewGobBuffDecoder()
+	m.gobBuffEncoder = encodingx.NewGobBuffEncoder(GobOrder)
+	m.gobBuffDecoder = encodingx.NewGobBuffDecoder(GobOrder)
 }
 
 func (m *ModuleRoute) Run() {
@@ -89,11 +92,13 @@ func (m *ModuleRoute) runForeignServices() {
 
 func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	name := args.From
-	m.gobBuffDecoder.DecodedBytes(args.Data)
+	//fmt.Println(222, args.Data)
+	m.gobBuffDecoder.WriteBytes(args.Data)
 	var module imodule.ModuleName
 	var link conf.ServiceConf
 	var state imodule.ServiceState
 	m.gobBuffDecoder.DecodeFromBuff(&module, &link, &state)
+	//fmt.Println(222, module, link, state)
 	server := server{Id: state.Name, ModuleName: module, Link: link, State: state, lastTimestamp: time.Now().UnixNano()}
 	m.gameCollection.InitServer(server)
 	m.Log.Infoln(m.GetId(), ": onConnected:", name, server)
@@ -107,7 +112,7 @@ func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCRe
 }
 
 func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
-	m.gobBuffDecoder.DecodedBytes(args.Data)
+	m.gobBuffDecoder.WriteBytes(args.Data)
 	var state imodule.ServiceState
 	m.gobBuffDecoder.DecodeFromBuff(&state)
 	m.gameCollection.UpdateServerState(state)

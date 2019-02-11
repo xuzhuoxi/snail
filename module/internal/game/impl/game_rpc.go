@@ -65,7 +65,9 @@ func notifyConnected(m *ModuleGame, toName string) {
 	link, _ := config.GetServiceConf(config.ServiceList[0])
 	state := imodule.ServiceState{Name: m.GetId(), Weight: m.GetStatePriority()}
 	m.gobBuffEncoder.EncodeToBuff(module, link, state)
-	data := m.gobBuffEncoder.EncodedBytes()
+	//fmt.Println(111, module, *link, state)
+	data := m.gobBuffEncoder.ReadBytes()
+	//fmt.Println(111, data)
 
 	args := &imodule.RPCArgs{From: m.GetId(), Cmd: imodule.CmdRoute_OnConnected, Data: data}
 	reply := &imodule.RPCReply{}
@@ -84,7 +86,7 @@ func notifyState(m *ModuleGame, toName string) {
 
 	state := m.ToSimpleState()
 	m.gobBuffEncoder.EncodeToBuff(state)
-	data := m.gobBuffEncoder.EncodedBytes()
+	data := m.gobBuffEncoder.ReadBytes()
 
 	args := &imodule.RPCArgs{From: m.GetId(), Cmd: imodule.CmdRoute_UpdateState, Data: data}
 	reply := &imodule.RPCReply{}

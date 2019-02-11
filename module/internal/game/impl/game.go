@@ -1,10 +1,13 @@
 package impl
 
 import (
+	"encoding/binary"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/util-go/encodingx"
 	"github.com/xuzhuoxi/util-go/netx"
 )
+
+var GobOrder = binary.BigEndian
 
 type ModuleGame struct {
 	imodule.ModuleBase
@@ -16,8 +19,8 @@ type ModuleGame struct {
 }
 
 func (m *ModuleGame) Init() {
-	m.gobBuffEncoder = encodingx.NewGobBuffEncoder()
-	m.gobBuffDecoder = encodingx.NewGobBuffDecoder()
+	m.gobBuffEncoder = encodingx.NewGobBuffEncoder(GobOrder)
+	m.gobBuffDecoder = encodingx.NewGobBuffDecoder(GobOrder)
 	m.rpcRemoteMap = make(map[string]netx.IRPCClient)
 	m.state = imodule.NewServiceState(m.GetId(), imodule.DefaultStatsInterval)
 }
