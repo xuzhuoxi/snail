@@ -19,8 +19,8 @@ type ModuleGame struct {
 }
 
 func (m *ModuleGame) Init() {
-	m.gobBuffEncoder = encodingx.NewGobBuffEncoder(GobOrder)
-	m.gobBuffDecoder = encodingx.NewGobBuffDecoder(GobOrder)
+	m.gobBuffEncoder = encodingx.NewDefaultGobBuffEncoder()
+	m.gobBuffDecoder = encodingx.NewDefaultGobBuffDecoder()
 	m.rpcRemoteMap = make(map[string]netx.IRPCClient)
 	m.state = imodule.NewServiceState(m.GetId(), imodule.DefaultStatsInterval)
 }

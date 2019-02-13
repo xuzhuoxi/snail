@@ -27,8 +27,8 @@ type ModuleRoute struct {
 
 func (m *ModuleRoute) Init() {
 	m.gameCollection = newCollection()
-	m.gobBuffEncoder = encodingx.NewGobBuffEncoder(GobOrder)
-	m.gobBuffDecoder = encodingx.NewGobBuffDecoder(GobOrder)
+	m.gobBuffEncoder = encodingx.NewDefaultGobBuffEncoder()
+	m.gobBuffDecoder = encodingx.NewDefaultGobBuffDecoder()
 }
 
 func (m *ModuleRoute) Run() {
