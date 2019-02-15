@@ -1,13 +1,13 @@
 package module
 
 import (
+	"github.com/xuzhuoxi/infra-go/cmdx"
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/internal"
 	_ "github.com/xuzhuoxi/snail/module/internal/admin"
 	_ "github.com/xuzhuoxi/snail/module/internal/game"
 	_ "github.com/xuzhuoxi/snail/module/internal/route"
-	"github.com/xuzhuoxi/util-go/cmdx"
-	"github.com/xuzhuoxi/util-go/logx"
 )
 
 //--------------------------------------------

@@ -2,9 +2,9 @@ package impl
 
 import (
 	"encoding/binary"
+	"github.com/xuzhuoxi/infra-go/encodingx"
+	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/module/imodule"
-	"github.com/xuzhuoxi/util-go/encodingx"
-	"github.com/xuzhuoxi/util-go/netx"
 )
 
 var GobOrder = binary.BigEndian

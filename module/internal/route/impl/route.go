@@ -2,11 +2,11 @@ package impl
 
 import (
 	"encoding/binary"
+	"github.com/xuzhuoxi/infra-go/encodingx"
+	"github.com/xuzhuoxi/infra-go/logx"
+	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
-	"github.com/xuzhuoxi/util-go/encodingx"
-	"github.com/xuzhuoxi/util-go/logx"
-	"github.com/xuzhuoxi/util-go/netx"
 	"net/http"
 	"strconv"
 	"time"

@@ -10,9 +10,9 @@ package internal
 import (
 	"fmt"
 	"github.com/CodisLabs/codis/pkg/utils/errors"
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
-	"github.com/xuzhuoxi/util-go/logx"
 	"sync"
 )
 

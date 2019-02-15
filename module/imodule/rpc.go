@@ -1,7 +1,7 @@
 package imodule
 
 import (
-	"github.com/xuzhuoxi/util-go/logx"
+	"github.com/xuzhuoxi/infra-go/logx"
 )
 
 const (

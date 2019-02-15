@@ -1,9 +1,9 @@
 package imodule
 
 import (
+	"github.com/xuzhuoxi/infra-go/logx"
+	"github.com/xuzhuoxi/infra-go/osxu"
 	"github.com/xuzhuoxi/snail/conf"
-	"github.com/xuzhuoxi/util-go/logx"
-	"github.com/xuzhuoxi/util-go/osxu"
 )
 
 type IModule interface {

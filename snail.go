@@ -1,9 +1,9 @@
 package snail
 
 import (
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module"
-	"github.com/xuzhuoxi/util-go/logx"
 )
 
 const version = "1.0.0"
