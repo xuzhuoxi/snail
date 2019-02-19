@@ -49,6 +49,11 @@ type ServiceStateDetail struct {
 	statsInterval int64
 }
 
+//检测时间
+func (s *ServiceStateDetail) StatsInterval() int64 {
+	return s.statsInterval
+}
+
 //启动
 func (s *ServiceStateDetail) Start() {
 	s.lock.Lock()

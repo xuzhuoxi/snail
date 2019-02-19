@@ -63,15 +63,15 @@ func (m *ModuleRoute) runRPCServices() {
 	m.rpcServer = netx.NewRPCServer()
 	rpcHandler := new(imodule.RPCHandler)
 
-	m.rpcServer.(logx.ILoggerSupport).SetLogger(m.Log)
-	rpcHandler.Log = m.Log
+	m.rpcServer.(logx.ILoggerSupport).SetLogger(m.Logger)
+	rpcHandler.Log = m.Logger
 
 	m.rpcServer.Register(rpcHandler)
 	imodule.MapRPCHandler(rpcHandler, imodule.CmdRoute_OnConnected, m.onConnected)
 	imodule.MapRPCHandler(rpcHandler, imodule.CmdRoute_OnDisconnected, m.onDisconnected)
 	imodule.MapRPCHandler(rpcHandler, imodule.CmdRoute_UpdateState, m.onUpdateState)
 	go func() {
-		m.Log.Infoln(m.GetId(), ":start rpc server at:"+rpc.Addr)
+		m.Logger.Infoln(m.GetId(), ":start rpc server at:"+rpc.Addr)
 		m.rpcServer.StartServer(rpc.Addr)
 	}()
 }
@@ -84,7 +84,7 @@ func (m *ModuleRoute) runForeignServices() {
 	}
 	m.httpServer = netx.NewHttpServer()
 	go func() {
-		m.Log.Infoln(m.GetId(), ":start http server at:"+service.Addr)
+		m.Logger.Infoln(m.GetId(), ":start http server at:"+service.Addr)
 		m.httpServer.MapFunc("/route", func(w http.ResponseWriter, r *http.Request) { m.onQueryRoute(w, r) })
 		m.httpServer.StartServer(service.Addr)
 	}()
@@ -101,13 +101,13 @@ func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply
 	//fmt.Println(222, module, link, state)
 	server := server{Id: state.Name, ModuleName: module, Link: link, State: state, lastTimestamp: time.Now().UnixNano()}
 	m.gameCollection.InitServer(server)
-	m.Log.Infoln(m.GetId(), ": onConnected:", name, server)
+	m.Logger.Infoln(m.GetId(), ": onConnected:", name, server)
 	return nil
 }
 
 func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	name := args.From
-	m.Log.Infoln(m.GetId(), ": onDisconnected:", name)
+	m.Logger.Infoln(m.GetId(), ": onDisconnected:", name)
 	return nil
 }
 
@@ -116,11 +116,11 @@ func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCRep
 	var state imodule.ServiceState
 	m.gobBuffDecoder.DecodeFromBuff(&state)
 	m.gameCollection.UpdateServerState(state)
-	m.Log.Infoln(m.GetId(), ": onUpdateState:", state)
+	m.Logger.Infoln(m.GetId(), ": onUpdateState:", state)
 	return nil
 }
 
 func (m *ModuleRoute) onQueryRoute(w http.ResponseWriter, r *http.Request) {
-	m.Log.Infoln("onQueryRoute:", len(m.gameCollection.GetServers(imodule.ModGame)))
+	m.Logger.Infoln("onQueryRoute:", len(m.gameCollection.GetServers(imodule.ModGame)))
 	w.Write([]byte(strconv.Itoa(len(m.gameCollection.GetServers(imodule.ModGame)))))
 }

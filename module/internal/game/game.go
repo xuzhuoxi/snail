@@ -2,11 +2,11 @@ package game
 
 import (
 	"github.com/xuzhuoxi/snail/module/imodule"
-	"github.com/xuzhuoxi/snail/module/internal/game/impl"
+	"github.com/xuzhuoxi/snail/module/internal/game/root"
 )
 
 func newModuleGame() imodule.IModule {
-	return &impl.ModuleGame{}
+	return &root.ModuleGame{}
 }
 
 func init() {

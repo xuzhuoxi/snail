@@ -159,7 +159,7 @@ func initModule(m *internalMod) {
 	if m.running() {
 		return
 	}
-	logx.Infoln(fmt.Sprintf("Init..........[%s]", m.name))
+	logx.Infoln(fmt.Sprintf("InitExtension..........[%s]", m.name))
 	m.mod.Init()
 }
 

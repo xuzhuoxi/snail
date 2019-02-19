@@ -14,6 +14,8 @@ type IGameStatus interface {
 	GetPassTime() int64
 	//服务器状态系数
 	GetStatePriority() float64
+	//详细状态
+	DetailState() *imodule.ServiceStateDetail
 	//转化为简单的状态
 	ToSimpleState() imodule.ServiceState
 }

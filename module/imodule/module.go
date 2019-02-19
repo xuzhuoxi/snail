@@ -27,8 +27,8 @@ type IBaseModule interface {
 //ModuleBase-------------------------------------------
 
 type ModuleBase struct {
-	cfg conf.ObjectConf
-	Log logx.ILogger
+	cfg    conf.ObjectConf
+	Logger logx.ILogger
 }
 
 func (m *ModuleBase) GetId() string {
@@ -49,13 +49,13 @@ func (m *ModuleBase) SetConfig(config conf.ObjectConf) {
 }
 
 func (m *ModuleBase) GetLogger() logx.ILogger {
-	return m.Log
+	return m.Logger
 }
 
 func (m *ModuleBase) updateLog() {
 	logName := m.cfg.Log
 	if "" == logName {
-		m.Log = logx.DefaultLogger()
+		m.Logger = logx.DefaultLogger()
 		return
 	}
 	fileName, extName := osxu.SplitFileName(logName)
@@ -63,7 +63,7 @@ func (m *ModuleBase) updateLog() {
 	newLog.SetPrefix("[" + m.cfg.Id + "] ")
 	newLog.SetConfig(logx.LogConfig{Type: logx.TypeConsole, Level: logx.LevelAll})
 	newLog.SetConfig(logx.LogConfig{Type: logx.TypeDailyFile, Level: logx.LevelAll, FileDir: m.cfg.LogDir(), FileName: fileName, FileExtName: "." + extName})
-	m.Log = newLog
+	m.Logger = newLog
 }
 
 //ModuleName--------------------------------------
