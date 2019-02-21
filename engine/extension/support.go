@@ -5,7 +5,9 @@
 //
 package extension
 
-import "github.com/xuzhuoxi/infra-go/protocolx"
+import (
+	"github.com/xuzhuoxi/infra-go/protocolx"
+)
 
 type ISnailInitExtension interface {
 	InitExtension() error

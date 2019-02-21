@@ -45,14 +45,15 @@ func (s *GameStatus) logger() logx.ILogger {
 	return s.singleCase.Logger()
 }
 
-func (s *GameStatus) encoder() encodingx.IGobBuffEncoder {
-	return s.singleCase.GobBuffEncoder()
+func (s *GameStatus) encoder() encodingx.IBuffEncoder {
+	return s.singleCase.BuffEncoder()
 }
 
 //---------------------------------------------
 
 func (s *GameStatus) Start() {
 	s.state.Start()
+	go s.CheckRPC()
 }
 
 func (s *GameStatus) CheckRPC() {

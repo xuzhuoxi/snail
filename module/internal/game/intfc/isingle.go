@@ -14,8 +14,14 @@ import (
 
 type IGameSingleCase interface {
 	DataBlockHandler() bytex.IDataBlockHandler
-	GobBuffEncoder() encodingx.IGobBuffEncoder
-	GobBuffDecoder() encodingx.IGobBuffDecoder
+	BuffEncoder() encodingx.IBuffEncoder
+	BuffDecoder() encodingx.IBuffDecoder
 	ExtensionContainer() extension.ISnailExtensionContainer
 	Logger() logx.ILogger
+
+	OnceSetDataBlockHandler(handler bytex.IDataBlockHandler)
+	OnceSetBuffEncoder(encoder encodingx.IBuffEncoder)
+	OnceSetBuffDecoder(decoder encodingx.IBuffDecoder)
+	OnceSetExtensionContainer(container extension.ISnailExtensionContainer)
+	OnceSetLogger(logger logx.ILogger)
 }
