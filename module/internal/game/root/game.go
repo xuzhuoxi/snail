@@ -28,9 +28,9 @@ func (m *ModuleGame) Init() {
 }
 
 func (m *ModuleGame) Run() {
-	m.status.Start()
-	m.server.StartServer()
 	m.extensionCfg.InitExtensions()
+	m.server.StartServer()
+	m.status.Start()
 }
 
 func (m *ModuleGame) Save() {

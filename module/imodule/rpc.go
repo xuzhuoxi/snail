@@ -44,7 +44,7 @@ type RPCHandler struct {
 }
 
 func (g *RPCHandler) OnRPCCall(args *RPCArgs, reply *RPCReply) error {
-	//g.Log.Infoln("\tOnRPCCall:", args, reply)
+	//g.Logger.Infoln("\tOnRPCCall:", args, reply)
 	handler, ok := g.handlerMap[args.Cmd]
 	if ok {
 		return handler(args, reply)

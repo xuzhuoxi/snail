@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"github.com/xuzhuoxi/infra-go/bytex"
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
@@ -8,8 +9,11 @@ import (
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 )
+
+var DefaultDataBlockHandler = bytex.NewDefaultDataBlockHandler()
 
 type ModuleRoute struct {
 	imodule.ModuleBase //内嵌
@@ -18,14 +22,16 @@ type ModuleRoute struct {
 	httpServer netx.IHttpServer
 	rpcServer  netx.IRPCServer
 
-	gobBuffEncoder encodingx.IBuffEncoder
-	gobBuffDecoder encodingx.IBuffDecoder
+	buffEncoder encodingx.IBuffEncoder
+	buffDecoder encodingx.IBuffDecoder
+
+	mu sync.Mutex
 }
 
 func (m *ModuleRoute) Init() {
 	m.gameCollection = newCollection()
-	m.gobBuffEncoder = encodingx.NewDefaultGobBuffEncoder()
-	m.gobBuffDecoder = encodingx.NewDefaultGobBuffDecoder()
+	m.buffEncoder = encodingx.NewGobBuffEncoder(DefaultDataBlockHandler)
+	m.buffDecoder = encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
 }
 
 func (m *ModuleRoute) Run() {
@@ -88,32 +94,36 @@ func (m *ModuleRoute) runForeignServices() {
 }
 
 func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
-	name := args.From
-	//fmt.Println(222, args.Data)
-	m.gobBuffDecoder.WriteBytes(args.Data)
+	//name := args.From
+	//decoder := m.buffDecoder
+	decoder := encodingx.NewDefaultGobBuffDecoder()
+	decoder.WriteBytes(args.Data)
 	var module imodule.ModuleName
 	var link conf.ServiceConf
 	var state imodule.ServiceState
-	m.gobBuffDecoder.DecodeFromBuff(&module, &link, &state)
-	//fmt.Println(222, module, link, state)
+	decoder.DecodeDataFromBuff(&module, &link, &state)
+
 	server := server{Id: state.Name, ModuleName: module, Link: link, State: state, lastTimestamp: time.Now().UnixNano()}
 	m.gameCollection.InitServer(server)
-	m.Logger.Infoln(":onConnected:", name, server)
+	m.Logger.Infoln("ModuleRoute.onConnected:", server)
 	return nil
 }
 
 func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	name := args.From
-	m.Logger.Infoln(":onDisconnected:", name)
+	m.Logger.Infoln("ModuleRoute.onDisconnected:", name)
 	return nil
 }
 
 func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
-	m.gobBuffDecoder.WriteBytes(args.Data)
+	//decoder := m.buffDecoder
+	decoder := encodingx.NewDefaultGobBuffDecoder()
+	decoder.WriteBytes(args.Data)
 	var state imodule.ServiceState
-	m.gobBuffDecoder.DecodeFromBuff(&state)
+	decoder.DecodeDataFromBuff(&state)
+
 	m.gameCollection.UpdateServerState(state)
-	m.Logger.Infoln(":onUpdateState:", state)
+	m.Logger.Infoln("ModuleRoute.onUpdateState:", state)
 	return nil
 }
 

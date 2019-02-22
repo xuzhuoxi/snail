@@ -12,7 +12,10 @@ import (
 
 func NewGameStatus(config conf.ObjectConf, singleCase intfc.IGameSingleCase) *GameStatus {
 	gameId := config.Id
-	return &GameStatus{config: config, singleCase: singleCase,
+	return &GameStatus{
+		gameId:       gameId,
+		config:       config,
+		singleCase:   singleCase,
 		state:        imodule.NewServiceState(gameId, imodule.DefaultStatsInterval),
 		rpcRemoteMap: make(map[string]netx.IRPCClient)}
 }
@@ -86,10 +89,10 @@ func (s *GameStatus) checkAndConnRemote(toName string) {
 func (s *GameStatus) conn2Service(toName string, network string, addr string) {
 	client := netx.NewRPCClient(netx.RpcNetworkTCP)
 	err := client.Dial(addr)
-	s.logger().Infoln(s.gameId, " Connecting to", toName, "(", addr, ") with RPC(", network, ")!")
 	if nil != err {
 		return
 	}
+	s.logger().Infoln(s.gameId, "Connected to", toName, "(", addr, ") with RPC(", network, ")!")
 	s.rpcRemoteMap[toName] = client
 	s.notifyConnected(toName)
 	s.notifyState(toName)
@@ -112,12 +115,11 @@ func (s *GameStatus) notifyConnected(toName string) {
 	module := imodule.ModGame
 	link, _ := config.GetServiceConf(config.ServiceList[0])
 	state := imodule.ServiceState{Name: s.gameId, Weight: s.GetStatePriority()}
-	s.encoder().EncodeToBuff(module, link, state)
-	//fmt.Println(111, module, *link, state)
+	s.encoder().EncodeDataToBuff(module, link, state)
 	data := s.encoder().ReadBytes()
-	//fmt.Println(111, data)
-
 	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnConnected, Data: data}
+	//s.logger().Debugln("GameStatus.Debug.notifyConnected:", *args)
+
 	reply := &imodule.RPCReply{}
 	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
 }
@@ -133,10 +135,12 @@ func (s *GameStatus) notifyState(toName string) {
 	toClient := s.rpcRemoteMap[toName]
 
 	state := s.ToSimpleState()
-	s.encoder().EncodeToBuff(state)
+	s.encoder().EncodeDataToBuff(state)
 	data := s.encoder().ReadBytes()
 
 	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_UpdateState, Data: data}
+	//s.logger().Debugln("GameStatus.Debug.notifyState:", *args)
+
 	reply := &imodule.RPCReply{}
 	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
 }
