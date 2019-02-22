@@ -22,16 +22,16 @@ type ModuleRoute struct {
 	httpServer netx.IHttpServer
 	rpcServer  netx.IRPCServer
 
-	buffEncoder encodingx.IBuffEncoder
-	buffDecoder encodingx.IBuffDecoder
+	//buffEncoder encodingx.IBuffEncoder
+	//buffDecoder encodingx.IBuffDecoder
 
 	mu sync.Mutex
 }
 
 func (m *ModuleRoute) Init() {
 	m.gameCollection = newCollection()
-	m.buffEncoder = encodingx.NewGobBuffEncoder(DefaultDataBlockHandler)
-	m.buffDecoder = encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
+	//m.buffEncoder = encodingx.NewGobBuffEncoder(DefaultDataBlockHandler)
+	//m.buffDecoder = encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
 }
 
 func (m *ModuleRoute) Run() {
