@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-var DefaultDataBlockHandler = bytex.NewDefaultDataBlockHandler()
-
 type ModuleRoute struct {
 	imodule.ModuleBase //内嵌
 	gameCollection     iCollection
@@ -22,16 +20,16 @@ type ModuleRoute struct {
 	httpServer netx.IHttpServer
 	rpcServer  netx.IRPCServer
 
-	//buffEncoder encodingx.IBuffEncoder
-	//buffDecoder encodingx.IBuffDecoder
+	buffEncoder encodingx.IBuffEncoder
+	buffDecoder encodingx.IBuffDecoder
 
 	mu sync.Mutex
 }
 
 func (m *ModuleRoute) Init() {
 	m.gameCollection = newCollection()
-	//m.buffEncoder = encodingx.NewGobBuffEncoder(DefaultDataBlockHandler)
-	//m.buffDecoder = encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
+	m.buffEncoder = encodingx.NewGobBuffEncoder(bytex.NewDefaultDataBlockHandler())
+	m.buffDecoder = encodingx.NewGobBuffDecoder(bytex.NewDefaultDataBlockHandler())
 }
 
 func (m *ModuleRoute) Run() {
@@ -95,17 +93,19 @@ func (m *ModuleRoute) runForeignServices() {
 
 func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	//name := args.From
-	//decoder := m.buffDecoder
-	decoder := encodingx.NewDefaultGobBuffDecoder()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	decoder := m.buffDecoder
+	//decoder := encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
 	decoder.WriteBytes(args.Data)
 	var module imodule.ModuleName
 	var link conf.ServiceConf
 	var state imodule.ServiceState
 	decoder.DecodeDataFromBuff(&module, &link, &state)
 
-	server := server{Id: state.Name, ModuleName: module, Link: link, State: state, lastTimestamp: time.Now().UnixNano()}
+	server := server{Id: args.From, ModuleName: module, Link: link, State: state, lastTimestamp: time.Now().UnixNano()}
 	m.gameCollection.InitServer(server)
-	m.Logger.Infoln("ModuleRoute.onConnected:", server)
+	m.Logger.Infoln("ModuleRoute.onConnected:", args.From, server)
 	return nil
 }
 
@@ -116,14 +116,16 @@ func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCRe
 }
 
 func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
-	//decoder := m.buffDecoder
-	decoder := encodingx.NewDefaultGobBuffDecoder()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	decoder := m.buffDecoder
+	//decoder := encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
 	decoder.WriteBytes(args.Data)
 	var state imodule.ServiceState
 	decoder.DecodeDataFromBuff(&state)
 
 	m.gameCollection.UpdateServerState(state)
-	m.Logger.Infoln("ModuleRoute.onUpdateState:", state)
+	m.Logger.Infoln("ModuleRoute.onUpdateState:", args.From, state)
 	return nil
 }
 

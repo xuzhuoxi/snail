@@ -115,10 +115,36 @@ func (s *GameStatus) notifyConnected(toName string) {
 	module := imodule.ModGame
 	link, _ := config.GetServiceConf(config.ServiceList[0])
 	state := imodule.ServiceState{Name: s.gameId, Weight: s.GetStatePriority()}
+
+	//s.encoder().EncodeDataToBuff(module)
+	//dataM := s.encoder().ReadBytes()
+	//s.encoder().EncodeDataToBuff(link)
+	//dataL := s.encoder().ReadBytes()
+	//s.encoder().EncodeDataToBuff(state)
+	//dataS := s.encoder().ReadBytes()
+	//
+	//s.encoder().EncodeDataToBuff(module)
+	//dataM2 := s.encoder().ReadBytes()
+	//s.encoder().EncodeDataToBuff(link)
+	//dataL2 := s.encoder().ReadBytes()
+	//s.encoder().EncodeDataToBuff(state)
+	//dataS2 := s.encoder().ReadBytes()
+	//
+	//s.logger().Debugln(11, dataM)
+	//s.logger().Debugln(12, dataM2)
+	//s.logger().Debugln(21, dataL)
+	//s.logger().Debugln(22, dataL2)
+	//s.logger().Debugln(31, dataS)
+	//s.logger().Debugln(32, dataS2)
+	//args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnConnected, Data: append(append(dataM, dataL...), dataS...)}
+
 	s.encoder().EncodeDataToBuff(module, link, state)
 	data := s.encoder().ReadBytes()
+
 	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnConnected, Data: data}
 	//s.logger().Debugln("GameStatus.Debug.notifyConnected:", *args)
+	//s.logger().Debugln("GameStatus.Debug.notifyConnected1:", data)
+	//s.logger().Debugln("GameStatus.Debug.notifyConnected2:", data2)
 
 	reply := &imodule.RPCReply{}
 	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
@@ -139,7 +165,7 @@ func (s *GameStatus) notifyState(toName string) {
 	data := s.encoder().ReadBytes()
 
 	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_UpdateState, Data: data}
-	//s.logger().Debugln("GameStatus.Debug.notifyState:", *args)
+	//s.logger().Debugln("GameStatus.Debug.notifyState:", args.Data, state)
 
 	reply := &imodule.RPCReply{}
 	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
