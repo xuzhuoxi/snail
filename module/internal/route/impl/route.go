@@ -3,6 +3,7 @@ package impl
 import (
 	"github.com/xuzhuoxi/infra-go/bytex"
 	"github.com/xuzhuoxi/infra-go/encodingx"
+	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
@@ -28,8 +29,8 @@ type ModuleRoute struct {
 
 func (m *ModuleRoute) Init() {
 	m.gameCollection = newCollection()
-	m.buffEncoder = encodingx.NewGobBuffEncoder(bytex.NewDefaultDataBlockHandler())
-	m.buffDecoder = encodingx.NewGobBuffDecoder(bytex.NewDefaultDataBlockHandler())
+	m.buffEncoder = gobx.NewGobBuffEncoder(bytex.NewDefaultDataBlockHandler())
+	m.buffDecoder = gobx.NewGobBuffDecoder(bytex.NewDefaultDataBlockHandler())
 }
 
 func (m *ModuleRoute) Run() {

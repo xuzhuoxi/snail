@@ -6,10 +6,15 @@
 package demo
 
 import (
-	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/module/internal/game/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
 )
+
+type testA struct {
+	A string
+	B int
+	C bool
+}
 
 func NewDemoExtension(ProtoId string, SingleCase intfc.IGameSingleCase) *DemoExtension {
 	return &DemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(ProtoId, SingleCase)}
@@ -19,29 +24,33 @@ type DemoExtension struct {
 	extension.GameExtensionSupport
 }
 
-func (e *DemoExtension) Batch() bool {
-	return false
+func (e *DemoExtension) RequestData() interface{} {
+	return testA{}
 }
 
-func (e *DemoExtension) HandleRequest(pId string, data interface{}, data2 ...interface{}) {
-	e.Logger().Infoln("DemoExtension.HandleRequest", pId, data, data2)
+func (e *DemoExtension) BeforeRequest() {
+	e.Logger().Debugln("DemoExtension.BeforeRequest!")
+}
+
+func (e *DemoExtension) AfterRequest() {
+	e.Logger().Debugln("DemoExtension.AfterRequest!")
+}
+
+func (e *DemoExtension) OnRequest(pId string, data interface{}, data2 ...interface{}) {
+	e.Logger().Debugln("DemoExtension.OnRequest", pId, data, data2)
 }
 
 func (e *DemoExtension) InitExtension() error {
-	e.Logger().Infoln("DemoExtension.InitExtension", e.ProtoId)
+	e.Logger().Debugln("DemoExtension.InitExtension", e.ProtoId)
 	return nil
 }
 
 func (e *DemoExtension) SaveExtension() error {
-	e.Logger().Infoln("DemoExtension.SaveExtension", e.ProtoId)
+	e.Logger().Debugln("DemoExtension.SaveExtension", e.ProtoId)
 	return nil
 }
 
 func (e *DemoExtension) DestroyExtension() error {
-	e.Logger().Infoln("DemoExtension.DestroyExtension", e.ProtoId)
+	e.Logger().Debugln("DemoExtension.DestroyExtension", e.ProtoId)
 	return nil
-}
-
-func (e *DemoExtension) Logger() logx.ILogger {
-	return e.SingleCase.Logger()
 }

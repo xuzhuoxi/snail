@@ -6,7 +6,7 @@
 package root
 
 import (
-	"github.com/xuzhuoxi/infra-go/logx"
+	"github.com/xuzhuoxi/snail/module/internal/game/extension/demo"
 	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
 )
 
@@ -20,16 +20,14 @@ type ExtensionConfig struct {
 
 func (c *ExtensionConfig) ConfigExtensions() {
 	singleCase := c.singleCase
-	container := singleCase.ExtensionContainer()
-	container.Len()
-	//container.AppendExtension(demo.NewDemoExtension("Demo1", singleCase))
-	//container.AppendExtension(demo.NewDemoExtension("Demo2", singleCase))
+	c.appendConfig("Demo1", demo.NewDemoExtension("Demo1", singleCase))
+	c.appendConfig("Demo2", demo.NewDemoExtension("Demo2", singleCase))
 }
 
 func (c *ExtensionConfig) InitExtensions() {
 	c.singleCase.ExtensionContainer().InitExtensions()
 }
 
-func (c *ExtensionConfig) Logger() logx.ILogger {
-	return c.singleCase.Logger()
+func (c *ExtensionConfig) appendConfig(pid string, extension intfc.IGameExtension) {
+	c.singleCase.ExtensionContainer().AppendExtension(extension)
 }

@@ -5,8 +5,9 @@
 //
 package intfc
 
-import "github.com/xuzhuoxi/snail/engine/extension"
+import "github.com/xuzhuoxi/infra-go/extendx/protox"
 
 type IGameExtension interface {
-	extension.ISnailExtension
+	protox.IProtocolExtension
+	protox.IRequestExtension
 }

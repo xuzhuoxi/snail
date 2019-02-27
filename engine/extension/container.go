@@ -7,24 +7,24 @@ package extension
 
 import (
 	"github.com/xuzhuoxi/infra-go/extendx"
-	"github.com/xuzhuoxi/infra-go/protocolx"
+	"github.com/xuzhuoxi/infra-go/extendx/protox"
 )
 
 type ISnailExtensionContainer interface {
-	protocolx.IProtocolContainer
+	protox.IProtocolContainer
 	InitExtensions()
 	SaveExtensions()
 	DestroyExtensions()
 }
 
 func NewSnailExtensionContainer() ISnailExtensionContainer {
-	return &SnailExtensionContainer{IProtocolContainer: protocolx.NewProtocolExtensionContainer()}
+	return &SnailExtensionContainer{IProtocolContainer: protox.NewProtocolExtensionContainer()}
 }
 
 //----------------------------------------------------
 
 type SnailExtensionContainer struct {
-	protocolx.IProtocolContainer
+	protox.IProtocolContainer
 }
 
 func (c *SnailExtensionContainer) InitExtensions() {
