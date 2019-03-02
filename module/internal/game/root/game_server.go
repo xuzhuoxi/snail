@@ -93,15 +93,15 @@ func (h *packHandler) onPack(msgBytes []byte, info interface{}) {
 	if be, ok := extension.(protox.IBeforeRequestExtension); ok {
 		be.BeforeRequest()
 	}
-	if re, ok := extension.(protox.IRequestExtension); ok {
+	if re, ok := extension.(protox.IOnRequestExtension); ok {
 		dataType := re.RequestDataType()
 		switch {
 		case dataType == protox.None || len(data) == 0:
-			h.handleRequestNone(re, pid)
+			h.handleRequestNone(re, pid, uid)
 		case dataType == protox.ByteArray:
-			h.handleRequestByteArray(re, pid, data)
+			h.handleRequestByteArray(re, pid, uid, data)
 		case dataType == protox.StructValue:
-			h.handleRequestStructValue(re, pid, data)
+			h.handleRequestStructValue(re, pid, uid, data)
 		}
 	}
 	if ae, ok := extension.(protox.IAfterRequestExtension); ok {
@@ -111,7 +111,7 @@ func (h *packHandler) onPack(msgBytes []byte, info interface{}) {
 	h.index++
 }
 
-func (h *packHandler) handleRequestStructValue(extension protox.IRequestExtension, pid string, data [][]byte) {
+func (h *packHandler) handleRequestStructValue(extension protox.IOnRequestExtension, pid string, uid string, data [][]byte) {
 	var list []interface{}
 	for _, bs := range data {
 		newData := extension.RequestData()
@@ -121,19 +121,19 @@ func (h *packHandler) handleRequestStructValue(extension protox.IRequestExtensio
 	if len(list) > 1 {
 		if be, ok := extension.(protox.IBatchExtension); ok {
 			if be.Batch() {
-				extension.OnRequest(pid, list[0], list[1:]...)
+				extension.OnRequest(pid, uid, list[0], list[1:]...)
 				return
 			}
 		}
 		for _, val := range list {
-			extension.OnRequest(pid, val)
+			extension.OnRequest(pid, uid, val)
 		}
 	} else {
-		extension.OnRequest(pid, list[0])
+		extension.OnRequest(pid, uid, list[0])
 	}
 }
 
-func (h *packHandler) handleRequestByteArray(extension protox.IRequestExtension, pid string, data [][]byte) {
+func (h *packHandler) handleRequestByteArray(extension protox.IOnRequestExtension, pid string, uid string, data [][]byte) {
 	if len(data) > 1 {
 		if be, ok := extension.(protox.IBatchExtension); ok {
 			if be.Batch() {
@@ -141,20 +141,20 @@ func (h *packHandler) handleRequestByteArray(extension protox.IRequestExtension,
 				for index := 1; index < len(data); index++ {
 					data2 = append(data2, data[index])
 				}
-				extension.OnRequest(pid, data[0], data2...)
+				extension.OnRequest(pid, uid, data[0], data2...)
 				return
 			}
 		}
 		for _, bs := range data {
-			extension.OnRequest(pid, bs)
+			extension.OnRequest(pid, uid, bs)
 		}
 	} else {
-		extension.OnRequest(pid, data[0])
+		extension.OnRequest(pid, uid, data[0])
 	}
 }
 
-func (h *packHandler) handleRequestNone(extension protox.IRequestExtension, pid string) {
-	extension.OnRequest(pid, nil)
+func (h *packHandler) handleRequestNone(extension protox.IOnRequestExtension, pid string, uid string) {
+	extension.OnRequest(pid, uid, nil)
 }
 
 //block0 : pid	utf8

@@ -36,8 +36,8 @@ func (e *DemoExtension) AfterRequest() {
 	e.Logger().Debugln("DemoExtension.AfterRequest!")
 }
 
-func (e *DemoExtension) OnRequest(pId string, data interface{}, data2 ...interface{}) {
-	e.Logger().Debugln("DemoExtension.OnRequest", pId, data, data2)
+func (e *DemoExtension) OnRequest(pId string, uid string, data interface{}, data2 ...interface{}) {
+	e.Logger().Debugln("DemoExtension.OnRequest", pId, uid, data, data2)
 }
 
 func (e *DemoExtension) InitExtension() error {
