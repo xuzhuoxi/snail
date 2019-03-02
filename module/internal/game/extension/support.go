@@ -11,8 +11,8 @@ import (
 	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
 )
 
-func NewGameExtensionSupport(ProtoId string, SingleCase intfc.IGameSingleCase) GameExtensionSupport {
-	support := protox.NewProtocolExtensionSupport(ProtoId)
+func NewGameExtensionSupport(Name string, SingleCase intfc.IGameSingleCase) GameExtensionSupport {
+	support := protox.NewProtocolExtensionSupport(Name)
 	return GameExtensionSupport{ProtocolExtensionSupport: support, SingleCase: SingleCase}
 }
 

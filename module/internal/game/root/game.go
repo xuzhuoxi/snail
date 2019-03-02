@@ -43,7 +43,7 @@ func (m *ModuleGame) newSingleCase() intfc.IGameSingleCase {
 	rs.OnceSetDataBlockHandler(bytex.NewDefaultDataBlockHandler())
 	rs.OnceSetBuffEncoder(gobx.NewGobBuffEncoder(rs.DataBlockHandler()))
 	rs.OnceSetBuffDecoder(gobx.NewGobBuffDecoder(rs.DataBlockHandler()))
-	rs.OnceSetExtensionContainer(extension.NewSnailExtensionContainer())
+	rs.OnceSetExtensionContainer(extension.NewISnailExtensionContainer())
 	rs.OnceSetLogger(m.Logger)
 	return rs
 }

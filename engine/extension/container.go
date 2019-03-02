@@ -17,14 +17,18 @@ type ISnailExtensionContainer interface {
 	DestroyExtensions()
 }
 
-func NewSnailExtensionContainer() ISnailExtensionContainer {
-	return &SnailExtensionContainer{IProtocolContainer: protox.NewProtocolExtensionContainer()}
+func NewISnailExtensionContainer() ISnailExtensionContainer {
+	return &SnailExtensionContainer{ProtocolContainer: protox.NewProtocolExtensionContainer()}
+}
+
+func NewSnailExtensionContainer() SnailExtensionContainer {
+	return SnailExtensionContainer{ProtocolContainer: protox.NewProtocolExtensionContainer()}
 }
 
 //----------------------------------------------------
 
 type SnailExtensionContainer struct {
-	protox.IProtocolContainer
+	protox.ProtocolContainer
 }
 
 func (c *SnailExtensionContainer) InitExtensions() {

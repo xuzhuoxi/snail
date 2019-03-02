@@ -10,7 +10,6 @@ import (
 	"github.com/xuzhuoxi/infra-go/bytex"
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/encodingx/jsonx"
-	"github.com/xuzhuoxi/infra-go/extendx"
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
@@ -83,38 +82,44 @@ type packHandler struct {
 	extensionCfg ExtensionConfig //克隆，减少资源竞争
 	singleCase   intfc.IGameSingleCase
 	decoder      encodingx.IDecodeHandler
-
-	index int
 }
 
 func (h *packHandler) onPack(msgBytes []byte, info interface{}) {
-	pid, uid, data := h.parsePackMessage(msgBytes)
-	extension := h.getExtension(pid)
-	if be, ok := extension.(protox.IBeforeRequestExtension); ok {
-		be.BeforeRequest()
+	name, pid, uid, data := h.parsePackMessage(msgBytes)
+	extension := h.getProtocolExtension(name)
+	if nil == extension {
+		h.singleCase.Logger().Warnln(fmt.Sprintf("Undefined Extension(%s)! Sender(%s)", name, uid))
+		return
 	}
-	if re, ok := extension.(protox.IOnRequestExtension); ok {
-		dataType := re.RequestDataType()
-		switch {
-		case dataType == protox.None || len(data) == 0:
-			h.handleRequestNone(re, pid, uid)
-		case dataType == protox.ByteArray:
-			h.handleRequestByteArray(re, pid, uid, data)
-		case dataType == protox.StructValue:
-			h.handleRequestStructValue(re, pid, uid, data)
+	if !extension.CheckProtocolId(pid) {
+		h.singleCase.Logger().Warnln(fmt.Sprintf("Undefined ProtoId(%s) Send to Extension(%s)! Sender(%s)", pid, name, uid))
+		return
+	}
+	if _, ok := extension.(protox.IRequestExtension); ok {
+		if be, ok := extension.(protox.IBeforeRequestExtension); ok {
+			be.BeforeRequest(pid)
+		}
+		if ore, ok := extension.(protox.IOnRequestExtension); ok {
+			dataType := ore.RequestDataType()
+			switch {
+			case dataType == protox.None || len(data) == 0:
+				h.handleRequestNone(ore, pid, uid)
+			case dataType == protox.ByteArray:
+				h.handleRequestByteArray(ore, pid, uid, data)
+			case dataType == protox.StructValue:
+				h.handleRequestStructValue(ore, pid, uid, data)
+			}
+		}
+		if ae, ok := extension.(protox.IAfterRequestExtension); ok {
+			ae.AfterRequest(pid)
 		}
 	}
-	if ae, ok := extension.(protox.IAfterRequestExtension); ok {
-		ae.AfterRequest()
-	}
-	fmt.Println(h.index, pid, uid, data)
-	h.index++
 }
 
 func (h *packHandler) handleRequestStructValue(extension protox.IOnRequestExtension, pid string, uid string, data [][]byte) {
 	var list []interface{}
 	for _, bs := range data {
-		newData := extension.RequestData()
+		newData := extension.GetRequestData(pid)
 		h.decoder.HandleDecode(bs, &newData)
 		list = append(list, newData)
 	}
@@ -137,7 +142,7 @@ func (h *packHandler) handleRequestByteArray(extension protox.IOnRequestExtensio
 	if len(data) > 1 {
 		if be, ok := extension.(protox.IBatchExtension); ok {
 			if be.Batch() {
-				data2 := []interface{}{}
+				var data2 []interface{}
 				for index := 1; index < len(data); index++ {
 					data2 = append(data2, data[index])
 				}
@@ -157,19 +162,21 @@ func (h *packHandler) handleRequestNone(extension protox.IOnRequestExtension, pi
 	extension.OnRequest(pid, uid, nil)
 }
 
-//block0 : pid	utf8
-//block1 : uid	utf8
+//block0 : eName utf8
+//block1 : pid	utf8
+//block2 : uid	utf8
 //[n]其它信息
-func (h *packHandler) parsePackMessage(msgBytes []byte) (pid string, uid string, data [][]byte) {
+func (h *packHandler) parsePackMessage(msgBytes []byte) (name string, pid string, uid string, data [][]byte) {
 	h.buffToData.Reset()
 	h.buffToData.WriteBytes(msgBytes)
+	name = string(h.buffToData.ReadData())
 	pid = string(h.buffToData.ReadData())
 	uid = string(h.buffToData.ReadData())
 	if h.buffToData.Len() > 0 {
 		for h.buffToData.Len() > 0 {
 			d := h.buffToData.ReadData()
 			if nil == d {
-				h.singleCase.Logger().Warnln("data is nil")
+				//h.singleCase.Logger().Warnln("data is nil")
 				break
 			}
 			data = append(data, d)
@@ -178,6 +185,10 @@ func (h *packHandler) parsePackMessage(msgBytes []byte) (pid string, uid string,
 	return
 }
 
-func (h *packHandler) getExtension(pid string) extendx.IExtension {
-	return h.singleCase.ExtensionContainer().GetExtension(pid)
+func (h *packHandler) getProtocolExtension(pid string) protox.IProtocolExtension {
+	e := h.singleCase.ExtensionContainer().GetExtension(pid)
+	if pe, ok := e.(protox.IProtocolExtension); ok {
+		return pe
+	}
+	return nil
 }

@@ -16,41 +16,46 @@ type testA struct {
 	C bool
 }
 
-func NewDemoExtension(ProtoId string, SingleCase intfc.IGameSingleCase) *DemoExtension {
-	return &DemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(ProtoId, SingleCase)}
+func NewDemoExtension(Name string, SingleCase intfc.IGameSingleCase) *DemoExtension {
+	return &DemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name, SingleCase)}
 }
 
 type DemoExtension struct {
 	extension.GameExtensionSupport
 }
 
-func (e *DemoExtension) RequestData() interface{} {
-	return testA{}
+func (e *DemoExtension) InitProtocolId() {
+	e.ProtoIdToValue["D_P2"] = testA{}
 }
 
-func (e *DemoExtension) BeforeRequest() {
-	e.Logger().Debugln("DemoExtension.BeforeRequest!")
+func (e *DemoExtension) GetRequestData(ProtoId string) (DataCopy interface{}) {
+	DataCopy = e.ProtoIdToValue[ProtoId]
+	return
 }
 
-func (e *DemoExtension) AfterRequest() {
-	e.Logger().Debugln("DemoExtension.AfterRequest!")
+func (e *DemoExtension) BeforeRequest(ProtoId string) {
+	e.Logger().Debugln("DemoExtension.BeforeRequest!", ProtoId)
 }
 
-func (e *DemoExtension) OnRequest(pId string, uid string, data interface{}, data2 ...interface{}) {
-	e.Logger().Debugln("DemoExtension.OnRequest", pId, uid, data, data2)
+func (e *DemoExtension) AfterRequest(ProtoId string) {
+	e.Logger().Debugln("DemoExtension.AfterRequest!", ProtoId)
+}
+
+func (e *DemoExtension) OnRequest(ProtoId string, Uid string, Data interface{}, Data2 ...interface{}) {
+	e.Logger().Debugln("DemoExtension.OnRequest", ProtoId, Uid, Data, Data2)
 }
 
 func (e *DemoExtension) InitExtension() error {
-	e.Logger().Debugln("DemoExtension.InitExtension", e.ProtoId)
+	e.Logger().Debugln("DemoExtension.InitExtension", e.Name)
 	return nil
 }
 
 func (e *DemoExtension) SaveExtension() error {
-	e.Logger().Debugln("DemoExtension.SaveExtension", e.ProtoId)
+	e.Logger().Debugln("DemoExtension.SaveExtension", e.Name)
 	return nil
 }
 
 func (e *DemoExtension) DestroyExtension() error {
-	e.Logger().Debugln("DemoExtension.DestroyExtension", e.ProtoId)
+	e.Logger().Debugln("DemoExtension.DestroyExtension", e.Name)
 	return nil
 }
