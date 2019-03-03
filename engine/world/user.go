@@ -7,83 +7,151 @@ package world
 
 import (
 	"github.com/pkg/errors"
-	"github.com/xuzhuoxi/infra-go/slicex"
 	"sync"
 )
 
-type IUserChannel interface {
-	//订阅的通信频道
-	TouchingChannels() []string
-
-	//订阅频道
-	TouchChannel(chanId string) error
-	//取消频道订阅
-	UnTouchChannel(chanId string) error
-	//处于频道
-	InChannel(chanId string) bool
-}
-
-type IUser interface {
+//用户实体
+type IUserEntity interface {
 	IEntity
-	IUserChannel
-	UserName() string
-	NickName() string
+	IInitEntity
+	IChannelSubscriber
+	IVariableSupport
 
-	SetUserVariables(vars Variables)
+	//用户名
+	UserName() string
 }
 
-type User struct {
-	Uid  string
-	Name string
-	Nick string
+//玩家索引
+type IUserIndex interface {
+	//检查User是否存在
+	CheckUser(userId string) bool
+	//获取User
+	GetUser(userId string) IUserEntity
+	//添加一个新User到索引中
+	AddUser(user IUserEntity) error
+	//从索引中移除一个User
+	RemoveUser(userId string) (IUserEntity, error)
+}
 
-	Addr     string
-	ZoneId   string
-	RoomId   string
-	Channels []string
+//-----------------------------------------------
+
+type UserEntity struct {
+	Uid  string //用户标识，唯一，内部使用
+	Name string //用户名，唯一
+	Nick string //用户昵称
+
+	Addr   string
+	ZoneId string
+	RoomId string
 
 	Pos XYZ
 
-	chanMu sync.RWMutex
+	ChannelSubscriber ChannelSubscriber
+	VariableSupport   VariableSupport
 }
 
-func (u *User) UID() string {
-	return u.Uid
+func (e *UserEntity) UID() string {
+	return e.Uid
 }
 
-func (u *User) UserName() string {
-	return u.Name
+func (e *UserEntity) UserName() string {
+	return e.Name
 }
 
-func (u *User) NickName() string {
-	return u.Nick
+func (e *UserEntity) NickName() string {
+	return e.Nick
 }
 
-func (u *User) TouchingChannels() []string {
-	return u.Channels
+func (e *UserEntity) InitEntity() {
+	e.ChannelSubscriber = NewChannelSubscriber()
+	e.VariableSupport = NewVariableSupport()
 }
 
-func (u *User) TouchChannel(chanId string) error {
-	if u.InChannel(chanId) {
-		return errors.New("TouchChannel Error :" + chanId)
-	}
-	u.chanMu.Lock()
-	defer u.chanMu.Unlock()
-	u.Channels = append(u.Channels, chanId)
-	return nil
+func (e *UserEntity) TouchingChannels() []string {
+	return e.ChannelSubscriber.TouchingChannels()
 }
 
-func (u *User) UnTouchChannel(chanId string) error {
-	index, ok := slicex.IndexString(u.Channels, chanId)
-	if !ok {
-		return errors.New("UnTouchChannel Error :" + chanId)
-	}
-	u.chanMu.Lock()
-	u.Channels = append(u.Channels[:index], u.Channels[index+1:]...)
-	return nil
+func (e *UserEntity) CopyTouchingChannels() []string {
+	return e.ChannelSubscriber.CopyTouchingChannels()
 }
 
-func (u *User) InChannel(chanId string) bool {
-	_, ok := slicex.IndexString(u.Channels, chanId)
+func (e *UserEntity) TouchChannel(chanId string) error {
+	return e.ChannelSubscriber.TouchChannel(chanId)
+}
+
+func (e *UserEntity) UnTouchChannel(chanId string) error {
+	return e.ChannelSubscriber.UnTouchChannel(chanId)
+}
+
+func (e *UserEntity) InChannel(chanId string) bool {
+	return e.ChannelSubscriber.InChannel(chanId)
+}
+
+func (e *UserEntity) SetVar(key string, value interface{}) {
+	e.VariableSupport.SetVar(key, value)
+}
+
+func (e *UserEntity) GetVar(key string) interface{} {
+	return e.VariableSupport.GetVar(key)
+}
+
+func (e *UserEntity) CheckVar(key string) bool {
+	return e.VariableSupport.CheckVar(key)
+}
+
+func (e *UserEntity) RemoveVar(key string) {
+	e.VariableSupport.RemoveVar(key)
+}
+
+//-----------------------------------------------
+
+func NewIUserIndex() IUserIndex {
+	return &UserIndex{userIdMap: make(map[string]IUserEntity)}
+}
+
+func NewUserIndex() UserIndex {
+	return UserIndex{userIdMap: make(map[string]IUserEntity)}
+}
+
+type UserIndex struct {
+	userIdMap map[string]IUserEntity
+	mu        sync.RWMutex
+}
+
+func (i *UserIndex) CheckUser(userId string) bool {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	_, ok := i.userIdMap[userId]
 	return ok
+}
+
+func (i *UserIndex) GetUser(userId string) IUserEntity {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	return i.userIdMap[userId]
+}
+
+func (i *UserIndex) AddUser(user IUserEntity) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if nil == user {
+		return errors.New("AddUser nil!")
+	}
+	userId := user.UID()
+	if i.CheckUser(userId) {
+		return errors.New("UserEntity Repeat At :" + userId)
+	}
+	i.userIdMap[userId] = user
+	return nil
+}
+
+func (i *UserIndex) RemoveUser(userId string) (IUserEntity, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	e, ok := i.userIdMap[userId]
+	if ok {
+		delete(i.userIdMap, userId)
+		return e, nil
+	}
+	return nil, errors.New("RemoveUser Error: No UserEntity[" + userId + "]")
 }

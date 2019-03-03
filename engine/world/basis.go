@@ -5,8 +5,6 @@
 //
 package world
 
-type Variables map[string]interface{}
-
 type XYZ struct {
 	X float64
 	Y float64
