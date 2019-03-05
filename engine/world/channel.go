@@ -11,6 +11,14 @@ import (
 	"sync"
 )
 
+type ChannelType uint16
+
+const (
+	None ChannelType = iota
+	Status
+	Chat
+)
+
 //频道实体
 type IChannelEntity interface {
 	IEntity
@@ -22,6 +30,7 @@ type IChannelEntity interface {
 
 //频道行为
 type IChannelBehavior interface {
+	MyChannel() IChannelEntity
 	//订阅频道
 	TouchChannel(subscriber string)
 	//取消频道订阅
@@ -52,25 +61,27 @@ type IChannelIndex interface {
 	CheckChannel(chanId string) bool
 	//获取Channel
 	GetChannel(chanId string) IChannelEntity
-	//添加一个新Channel到索引中
+	//从索引中增加一个Channel
 	AddChannel(channel IChannelEntity) error
 	//从索引中移除一个Channel
 	RemoveChannel(chanId string) (IChannelEntity, error)
+	//从索引中更新一个Channel
+	UpdateChannel(channel IChannelEntity) error
 }
 
 //-----------------------------------------------
 
-func NewIChannelEntity(uid string, nick string) IChannelEntity {
-	return &ChannelEntity{ChanId: uid, Nick: nick}
+func NewIChannelEntity(chanId string, chanName string) IChannelEntity {
+	return &ChannelEntity{ChanId: chanId, ChanName: chanName}
 }
 
-func NewChannelEntity(uid string, nick string) ChannelEntity {
-	return ChannelEntity{ChanId: uid, Nick: nick}
+func NewChannelEntity(chanId string, chanName string) *ChannelEntity {
+	return &ChannelEntity{ChanId: chanId, ChanName: chanName}
 }
 
 type ChannelEntity struct {
 	ChanId     string
-	Nick       string
+	ChanName   string
 	Subscriber []string
 	Mu         sync.RWMutex
 }
@@ -80,7 +91,7 @@ func (c *ChannelEntity) UID() string {
 }
 
 func (c *ChannelEntity) NickName() string {
-	return c.Nick
+	return c.ChanName
 }
 
 func (c *ChannelEntity) InitEntity() {
@@ -88,6 +99,10 @@ func (c *ChannelEntity) InitEntity() {
 
 func (c *ChannelEntity) ChannelId() string {
 	return c.ChanId
+}
+
+func (c *ChannelEntity) MyChannel() IChannelEntity {
+	return c
 }
 
 func (c *ChannelEntity) TouchChannel(subscriber string) {
@@ -146,8 +161,8 @@ func NewIChannelSubscriber() IChannelSubscriber {
 	return &ChannelSubscriber{}
 }
 
-func NewChannelSubscriber() ChannelSubscriber {
-	return ChannelSubscriber{}
+func NewChannelSubscriber() *ChannelSubscriber {
+	return &ChannelSubscriber{}
 }
 
 type ChannelSubscriber struct {
@@ -227,11 +242,11 @@ func (i *ChannelIndex) AddChannel(channel IChannelEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == channel {
-		return errors.New("AddChannel nil!")
+		return errors.New("ChannelIndex.AddChannel Error: channel is nil")
 	}
 	chanId := channel.UID()
 	if i.CheckChannel(chanId) {
-		return errors.New("ChannelEntity Repeat At :" + chanId)
+		return errors.New("ChannelIndex.AddChannel Error: Channel(" + chanId + ") Duplicate")
 	}
 	i.chanMap[chanId] = channel
 	return nil
@@ -240,10 +255,19 @@ func (i *ChannelIndex) AddChannel(channel IChannelEntity) error {
 func (i *ChannelIndex) RemoveChannel(chanId string) (IChannelEntity, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	e, ok := i.chanMap[chanId]
-	if ok {
+	if e, ok := i.chanMap[chanId]; ok {
 		delete(i.chanMap, chanId)
 		return e, nil
 	}
-	return nil, errors.New("RemoveChannel Error: No ChannelEntity[" + chanId + "]")
+	return nil, errors.New("ChannelIndex.RemoveChannel Error: No Channel(" + chanId + ")")
+}
+
+func (i *ChannelIndex) UpdateChannel(channel IChannelEntity) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if nil == channel {
+		return errors.New("ChannelIndex.UpdateChannel Error: Channel is nil")
+	}
+	i.chanMap[channel.UID()] = channel
+	return nil
 }

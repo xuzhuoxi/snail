@@ -5,6 +5,8 @@
 //
 package world
 
+import "sync"
+
 type EntityType int
 
 const (
@@ -28,4 +30,41 @@ type IEntity interface {
 type IInitEntity interface {
 	//初始化实体
 	InitEntity()
+}
+
+type IEntityOwner interface {
+	GetOwner() string
+	NoneOwner() bool
+
+	SetOwner(ownerId string)
+	ClearOwner()
+}
+
+type EntityOwnerSupport struct {
+	Owner string
+	oMu   sync.RWMutex
+}
+
+func (s *EntityOwnerSupport) GetOwner() string {
+	s.oMu.RLock()
+	defer s.oMu.RUnlock()
+	return s.Owner
+}
+
+func (s *EntityOwnerSupport) NoneOwner() bool {
+	s.oMu.RLock()
+	defer s.oMu.RUnlock()
+	return s.Owner == ""
+}
+
+func (s *EntityOwnerSupport) SetOwner(ownerId string) {
+	s.oMu.Lock()
+	defer s.oMu.Unlock()
+	s.Owner = ownerId
+}
+
+func (s *EntityOwnerSupport) ClearOwner() {
+	s.oMu.Lock()
+	defer s.oMu.Unlock()
+	s.Owner = ""
 }

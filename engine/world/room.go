@@ -14,14 +14,17 @@ import (
 //房间实体
 type IRoomEntity interface {
 	IEntity
+	IEntityOwner
 	IInitEntity
 	IChannelBehavior
 	IVariableSupport
 
 	//进入房间
-	EnterRoom(user string) error
+	EnterRoom(userId string) error
 	//离开房间
-	LeaveRoom(user string) error
+	LeaveRoom(userId string) error
+	//包含用户
+	ContainUser(userId string) bool
 }
 
 //房组
@@ -52,20 +55,26 @@ type IRoomIndex interface {
 	AddRoom(room IRoomEntity) error
 	//从索引中移除一个Room
 	RemoveRoom(roomId string) (IRoomEntity, error)
+	//从索引中更新一个Room
+	UpdateRoom(room IRoomEntity) error
 }
 
 //-----------------------------------------------
 
-func NewIRoomEntity(roomId string, roomName string, maxMember int) IRoomEntity {
-	return &RoomEntity{RoomId: roomId, RoomName: roomName, MaxMember: maxMember}
+func NewIRoomEntity(roomId string, roomName string) IRoomEntity {
+	return &RoomEntity{RoomId: roomId, RoomName: roomName, MaxMember: 0}
 }
 
-func NewRoomEntity(roomId string, roomName string, maxMember int) RoomEntity {
-	return RoomEntity{RoomId: roomId, RoomName: roomName, MaxMember: maxMember}
+func NewIAOBRoomEntity(roomId string, roomName string) IRoomEntity {
+	return &AOBRoomEntity{RoomEntity: RoomEntity{RoomId: roomId, RoomName: roomName, MaxMember: 0}}
 }
 
-func NewAOBRoomEntity(roomId string, roomName string, maxMember int) AOBRoomEntity {
-	return AOBRoomEntity{RoomEntity: RoomEntity{RoomId: roomId, RoomName: roomName, MaxMember: maxMember}}
+func NewRoomEntity(roomId string, roomName string) *RoomEntity {
+	return &RoomEntity{RoomId: roomId, RoomName: roomName, MaxMember: 0}
+}
+
+func NewAOBRoomEntity(roomId string, roomName string) *AOBRoomEntity {
+	return &AOBRoomEntity{RoomEntity: RoomEntity{RoomId: roomId, RoomName: roomName, MaxMember: 0}}
 }
 
 type RoomConfig struct {
@@ -93,8 +102,9 @@ type RoomEntity struct {
 	userList []string
 	userMu   sync.RWMutex
 
-	ChannelEntity   ChannelEntity
-	VariableSupport VariableSupport
+	EntityOwnerSupport
+	ChannelEntity   *ChannelEntity
+	VariableSupport *VariableSupport
 }
 
 func (e *RoomEntity) UID() string {
@@ -111,28 +121,39 @@ func (e *RoomEntity) InitEntity() {
 	e.ChannelEntity.InitEntity()
 }
 
-func (e *RoomEntity) EnterRoom(user string) error {
+func (e *RoomEntity) EnterRoom(userId string) error {
 	e.userMu.Lock()
 	defer e.userMu.Unlock()
-	_, ok := slicex.IndexString(e.userList, user)
+	_, ok := slicex.IndexString(e.userList, userId)
 	if ok {
-		return errors.New("EnterRoom Repeat At" + user)
+		return errors.New("EnterRoom Repeat At" + userId)
 	}
-	e.userList = append(e.userList, user)
-	e.ChannelEntity.TouchChannel(user)
+	e.userList = append(e.userList, userId)
+	e.ChannelEntity.TouchChannel(userId)
 	return nil
 }
 
-func (e *RoomEntity) LeaveRoom(user string) error {
+func (e *RoomEntity) LeaveRoom(userId string) error {
 	e.userMu.Lock()
 	defer e.userMu.Unlock()
-	index, ok := slicex.IndexString(e.userList, user)
+	index, ok := slicex.IndexString(e.userList, userId)
 	if !ok {
-		return errors.New("LeaveRoom Fail, No User:" + user)
+		return errors.New("LeaveRoom Fail, No User:" + userId)
 	}
-	e.ChannelEntity.UnTouchChannel(user)
+	e.ChannelEntity.UnTouchChannel(userId)
 	e.userList = append(e.userList[:index], e.userList[index+1:]...)
 	return nil
+}
+
+func (e *RoomEntity) ContainUser(userId string) bool {
+	e.userMu.RLock()
+	defer e.userMu.RUnlock()
+	_, ok := slicex.IndexString(e.userList, userId)
+	return ok
+}
+
+func (e *RoomEntity) MyChannel() IChannelEntity {
+	return e.ChannelEntity
 }
 
 func (e *RoomEntity) TouchChannel(subscriber string) {
@@ -199,11 +220,11 @@ func (i *RoomIndex) AddRoom(room IRoomEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == room {
-		return errors.New("AddRoom nil!")
+		return errors.New("RoomIndex.AddRoom Error: room is nil")
 	}
 	roomId := room.UID()
 	if i.CheckRoom(roomId) {
-		return errors.New("Room Repeat At :" + roomId)
+		return errors.New("RoomIndex.AddRoom Error: Room(" + roomId + ") Duplicate")
 	}
 	i.roomMap[roomId] = room
 	return nil
@@ -217,5 +238,15 @@ func (i *RoomIndex) RemoveRoom(roomId string) (IRoomEntity, error) {
 		delete(i.roomMap, roomId)
 		return e, nil
 	}
-	return nil, errors.New("RemoveRoom Error: No Room[" + roomId + "]")
+	return nil, errors.New("RoomIndex.RemoveRoom Error: No Room(" + roomId + ")")
+}
+
+func (i *RoomIndex) UpdateRoom(room IRoomEntity) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if nil == room {
+		return errors.New("RoomIndex.UpdateRoom Error: room is nil")
+	}
+	i.roomMap[room.UID()] = room
+	return nil
 }

@@ -19,6 +19,11 @@ type IUserEntity interface {
 
 	//用户名
 	UserName() string
+	CurrentZone() string
+	CurrentRoom() string
+	SetWorldLocation(zoneId string, roomId string)
+	CurrentPos() XYZ
+	SetPos(pos XYZ)
 }
 
 //玩家索引
@@ -31,6 +36,8 @@ type IUserIndex interface {
 	AddUser(user IUserEntity) error
 	//从索引中移除一个User
 	RemoveUser(userId string) (IUserEntity, error)
+	//从索引中更新一个User
+	UpdateUser(user IUserEntity) error
 }
 
 //-----------------------------------------------
@@ -43,11 +50,11 @@ type UserEntity struct {
 	Addr   string
 	ZoneId string
 	RoomId string
+	Pos    XYZ
+	attrMu sync.RWMutex
 
-	Pos XYZ
-
-	ChannelSubscriber ChannelSubscriber
-	VariableSupport   VariableSupport
+	ChannelSubscriber *ChannelSubscriber
+	VariableSupport   *VariableSupport
 }
 
 func (e *UserEntity) UID() string {
@@ -65,6 +72,37 @@ func (e *UserEntity) NickName() string {
 func (e *UserEntity) InitEntity() {
 	e.ChannelSubscriber = NewChannelSubscriber()
 	e.VariableSupport = NewVariableSupport()
+}
+
+func (e *UserEntity) CurrentZone() string {
+	e.attrMu.RLock()
+	defer e.attrMu.RUnlock()
+	return e.ZoneId
+}
+
+func (e *UserEntity) CurrentRoom() string {
+	e.attrMu.RLock()
+	defer e.attrMu.RUnlock()
+	return e.RoomId
+}
+
+func (e *UserEntity) SetWorldLocation(zoneId string, roomId string) {
+	e.attrMu.Lock()
+	defer e.attrMu.Unlock()
+	e.ZoneId = zoneId
+	e.RoomId = roomId
+}
+
+func (e *UserEntity) CurrentPos() XYZ {
+	e.attrMu.RLock()
+	defer e.attrMu.RUnlock()
+	return e.Pos
+}
+
+func (e *UserEntity) SetPos(pos XYZ) {
+	e.attrMu.Lock()
+	defer e.attrMu.Unlock()
+	e.Pos = pos
 }
 
 func (e *UserEntity) TouchingChannels() []string {
@@ -109,8 +147,8 @@ func NewIUserIndex() IUserIndex {
 	return &UserIndex{userIdMap: make(map[string]IUserEntity)}
 }
 
-func NewUserIndex() UserIndex {
-	return UserIndex{userIdMap: make(map[string]IUserEntity)}
+func NewUserIndex() *UserIndex {
+	return &UserIndex{userIdMap: make(map[string]IUserEntity)}
 }
 
 type UserIndex struct {
@@ -135,11 +173,11 @@ func (i *UserIndex) AddUser(user IUserEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == user {
-		return errors.New("AddUser nil!")
+		return errors.New("UserIndex.AddUser Error: user is nil")
 	}
 	userId := user.UID()
 	if i.CheckUser(userId) {
-		return errors.New("UserEntity Repeat At :" + userId)
+		return errors.New("UserIndex.AddUser Error: UserId(" + userId + ") Duplicate")
 	}
 	i.userIdMap[userId] = user
 	return nil
@@ -153,5 +191,15 @@ func (i *UserIndex) RemoveUser(userId string) (IUserEntity, error) {
 		delete(i.userIdMap, userId)
 		return e, nil
 	}
-	return nil, errors.New("RemoveUser Error: No UserEntity[" + userId + "]")
+	return nil, errors.New("UserIndex.RemoveUser Error: No User(" + userId + ")")
+}
+
+func (i *UserIndex) UpdateUser(user IUserEntity) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if nil == user {
+		return errors.New("UserIndex.UpdateUser Error: user is nil")
+	}
+	i.userIdMap[user.UID()] = user
+	return nil
 }

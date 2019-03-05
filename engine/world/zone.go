@@ -13,6 +13,7 @@ import (
 
 type IZoneEntity interface {
 	IEntity
+	IEntityOwner
 	IInitEntity
 	IChannelBehavior
 	IRoomGroup
@@ -28,11 +29,21 @@ type IZoneIndex interface {
 	AddZone(zone IZoneEntity) error
 	//从索引中移除一个Zone
 	RemoveZone(zoneId string) (IZoneEntity, error)
+	//更新一个新Zone到索引中
+	UpdateZone(zone IZoneEntity) error
 }
 
 //-----------------------------------------------
 
 type ZoneConfig struct {
+}
+
+func NewIZoneEntity(zoneId string, zoneName string) IZoneEntity {
+	return &ZoneEntity{ZoneId: zoneId, ZoneName: zoneName}
+}
+
+func NewZoneEntity(zoneId string, zoneName string) *ZoneEntity {
+	return &ZoneEntity{ZoneId: zoneId, ZoneName: zoneName}
 }
 
 type ZoneEntity struct {
@@ -42,8 +53,9 @@ type ZoneEntity struct {
 	roomList []string
 	roomMu   sync.RWMutex
 
-	ChannelEntity   ChannelEntity
-	VariableSupport VariableSupport
+	EntityOwnerSupport
+	ChannelEntity   *ChannelEntity
+	VariableSupport *VariableSupport
 }
 
 func (e *ZoneEntity) UID() string {
@@ -100,7 +112,11 @@ func (e *ZoneEntity) RemoveRoom(roomId string) error {
 		return errors.New("RemoveRoom Fail, No Room:" + roomId)
 	}
 	e.roomList = append(e.roomList[:index], e.roomList[index+1:]...)
-	panic("implement me")
+	return nil
+}
+
+func (e *ZoneEntity) MyChannel() IChannelEntity {
+	return e.ChannelEntity
 }
 
 func (e *ZoneEntity) TouchChannel(subscriber string) {
@@ -167,11 +183,11 @@ func (i *ZoneIndex) AddZone(zone IZoneEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == zone {
-		return errors.New("AddZone nil!")
+		return errors.New("ZoneIndex.AddZone Error: zone is nil")
 	}
 	zoneId := zone.UID()
 	if i.CheckZone(zoneId) {
-		return errors.New("Zone Repeat At :" + zoneId)
+		return errors.New("ZoneIndex.AddZone Error: Zone(" + zoneId + ") Duplicate")
 	}
 	i.zoneMap[zoneId] = zone
 	return nil
@@ -185,5 +201,15 @@ func (i *ZoneIndex) RemoveZone(zoneId string) (IZoneEntity, error) {
 		delete(i.zoneMap, zoneId)
 		return e, nil
 	}
-	return nil, errors.New("RemoveZone Error: No Zone[" + zoneId + "]")
+	return nil, errors.New("ZoneIndex.RemoveZone Error: No Zone(" + zoneId + ")")
+}
+
+func (i *ZoneIndex) UpdateZone(zone IZoneEntity) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if nil == zone {
+		return errors.New("ZoneIndex.UpdateZone Error: zone is nil")
+	}
+	i.zoneMap[zone.UID()] = zone
+	return nil
 }

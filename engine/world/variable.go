@@ -22,8 +22,8 @@ func NewIVariableSupport() IVariableSupport {
 	return &VariableSupport{set: make(map[string]interface{})}
 }
 
-func NewVariableSupport() VariableSupport {
-	return VariableSupport{set: make(map[string]interface{})}
+func NewVariableSupport() *VariableSupport {
+	return &VariableSupport{set: make(map[string]interface{})}
 }
 
 //---------------------------------------------
