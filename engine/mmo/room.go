@@ -3,11 +3,10 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package world
+package mmo
 
 import (
 	"errors"
-	"github.com/xuzhuoxi/infra-go/slicex"
 	"sync"
 )
 
@@ -25,24 +24,8 @@ type IRoomEntity interface {
 	LeaveRoom(userId string) error
 	//包含用户
 	ContainUser(userId string) bool
-}
-
-//房组
-type IRoomGroup interface {
-	//房组id
-	GroupId() string
-	//房组名称
-	GroupName() string
-	//包含房间id
-	Rooms() []string
-	//包含房间id
-	CopyRooms() []string
-	//检查房间是否属于当前房组
-	CheckRoom(roomId string) bool
-	//加入房间到组
-	AddRoom(roomId string) error
-	//从组中移除房间
-	RemoveRoom(roomId string) error
+	//用户列表
+	UserList() []string
 }
 
 //房间索引
@@ -98,13 +81,13 @@ type RoomEntity struct {
 	RoomId    string
 	RoomName  string
 	MaxMember int
-
-	userList []string
-	userMu   sync.RWMutex
+	UserGroup *EntityListGroup
 
 	EntityOwnerSupport
 	ChannelEntity   *ChannelEntity
 	VariableSupport *VariableSupport
+
+	mutex sync.Mutex
 }
 
 func (e *RoomEntity) UID() string {
@@ -115,41 +98,39 @@ func (e *RoomEntity) NickName() string {
 	return e.RoomName
 }
 
+func (e *RoomEntity) EntityType() EntityType {
+	return EntityRoom
+}
+
 func (e *RoomEntity) InitEntity() {
+	e.UserGroup = NewEntityListGroup(e.RoomId, e.RoomName, EntityUser)
 	e.ChannelEntity = NewChannelEntity(e.RoomId, e.RoomName)
 	e.VariableSupport = NewVariableSupport()
 	e.ChannelEntity.InitEntity()
 }
 
 func (e *RoomEntity) EnterRoom(userId string) error {
-	e.userMu.Lock()
-	defer e.userMu.Unlock()
-	_, ok := slicex.IndexString(e.userList, userId)
-	if ok {
-		return errors.New("EnterRoom Repeat At" + userId)
-	}
-	e.userList = append(e.userList, userId)
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+	e.UserGroup.AppendEntity(userId)
 	e.ChannelEntity.TouchChannel(userId)
 	return nil
 }
 
 func (e *RoomEntity) LeaveRoom(userId string) error {
-	e.userMu.Lock()
-	defer e.userMu.Unlock()
-	index, ok := slicex.IndexString(e.userList, userId)
-	if !ok {
-		return errors.New("LeaveRoom Fail, No User:" + userId)
-	}
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
 	e.ChannelEntity.UnTouchChannel(userId)
-	e.userList = append(e.userList[:index], e.userList[index+1:]...)
+	e.UserGroup.RemoveEntity(userId)
 	return nil
 }
 
 func (e *RoomEntity) ContainUser(userId string) bool {
-	e.userMu.RLock()
-	defer e.userMu.RUnlock()
-	_, ok := slicex.IndexString(e.userList, userId)
-	return ok
+	return e.UserGroup.CheckEntity(userId)
+}
+
+func (e *RoomEntity) UserList() []string {
+	return e.UserGroup.Entities()
 }
 
 func (e *RoomEntity) MyChannel() IChannelEntity {

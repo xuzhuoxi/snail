@@ -3,7 +3,7 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package world
+package mmo
 
 import "sync"
 
@@ -25,6 +25,8 @@ type IEntity interface {
 	UID() string
 	//昵称，显示使用
 	NickName() string
+	//实体类型
+	EntityType() EntityType
 }
 
 type IInitEntity interface {
@@ -38,6 +40,10 @@ type IEntityOwner interface {
 
 	SetOwner(ownerId string)
 	ClearOwner()
+}
+
+func NewEntityOwnerSupport() *EntityOwnerSupport {
+	return &EntityOwnerSupport{}
 }
 
 type EntityOwnerSupport struct {

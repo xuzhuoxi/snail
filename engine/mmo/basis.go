@@ -3,7 +3,7 @@
 //on 2019-02-19.
 //@author xuzhuoxi
 //
-package world
+package mmo
 
 type XYZ struct {
 	X float64

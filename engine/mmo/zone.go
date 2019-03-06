@@ -3,11 +3,10 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package world
+package mmo
 
 import (
 	"errors"
-	"github.com/xuzhuoxi/infra-go/slicex"
 	"sync"
 )
 
@@ -16,8 +15,16 @@ type IZoneEntity interface {
 	IEntityOwner
 	IInitEntity
 	IChannelBehavior
-	IRoomGroup
 	IVariableSupport
+
+	//添加房间
+	AddRoom(roomId string) error
+	//移除房间
+	RemoveRoom(roomId string) error
+	//检查房间存在性
+	ContainRoom(roomId string) bool
+	//房间列表
+	RoomList() []string
 }
 
 type IZoneIndex interface {
@@ -47,11 +54,9 @@ func NewZoneEntity(zoneId string, zoneName string) *ZoneEntity {
 }
 
 type ZoneEntity struct {
-	ZoneId   string
-	ZoneName string
-
-	roomList []string
-	roomMu   sync.RWMutex
+	ZoneId    string
+	ZoneName  string
+	RoomGroup *EntityListGroup
 
 	EntityOwnerSupport
 	ChannelEntity   *ChannelEntity
@@ -66,53 +71,31 @@ func (e *ZoneEntity) NickName() string {
 	return e.ZoneName
 }
 
+func (e *ZoneEntity) EntityType() EntityType {
+	return EntityZone
+}
+
 func (e *ZoneEntity) InitEntity() {
+	e.RoomGroup = NewEntityListGroup(e.ZoneId, e.ZoneName, EntityRoom)
 	e.ChannelEntity = NewChannelEntity(e.ZoneId, e.ZoneName)
 	e.VariableSupport = NewVariableSupport()
 	e.ChannelEntity.InitEntity()
 }
 
-func (e *ZoneEntity) GroupId() string {
-	return e.ZoneId
-}
-
-func (e *ZoneEntity) GroupName() string {
-	return e.ZoneName
-}
-
-func (e *ZoneEntity) Rooms() []string {
-	return e.roomList
-}
-
-func (e *ZoneEntity) CopyRooms() []string {
-	return slicex.CopyString(e.roomList)
-}
-
-func (e *ZoneEntity) CheckRoom(roomId string) bool {
-	_, ok := slicex.IndexString(e.roomList, roomId)
-	return ok
-}
-
 func (e *ZoneEntity) AddRoom(roomId string) error {
-	e.roomMu.Lock()
-	defer e.roomMu.Unlock()
-	_, ok := slicex.IndexString(e.roomList, roomId)
-	if ok {
-		return errors.New("AddRoom Repeat At" + roomId)
-	}
-	e.roomList = append(e.roomList, roomId)
-	return nil
+	return e.RoomGroup.AppendEntity(roomId)
 }
 
 func (e *ZoneEntity) RemoveRoom(roomId string) error {
-	e.roomMu.Lock()
-	defer e.roomMu.Unlock()
-	index, ok := slicex.IndexString(e.roomList, roomId)
-	if !ok {
-		return errors.New("RemoveRoom Fail, No Room:" + roomId)
-	}
-	e.roomList = append(e.roomList[:index], e.roomList[index+1:]...)
-	return nil
+	return e.RoomGroup.RemoveEntity(roomId)
+}
+
+func (e *ZoneEntity) ContainRoom(roomId string) bool {
+	return e.RoomGroup.CheckEntity(roomId)
+}
+
+func (e *ZoneEntity) RoomList() []string {
+	return e.RoomGroup.Entities()
 }
 
 func (e *ZoneEntity) MyChannel() IChannelEntity {

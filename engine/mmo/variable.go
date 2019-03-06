@@ -3,7 +3,7 @@
 //on 2019-03-03.
 //@author xuzhuoxi
 //
-package world
+package mmo
 
 import "sync"
 

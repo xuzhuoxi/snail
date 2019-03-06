@@ -3,7 +3,7 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package world
+package mmo
 
 import (
 	"errors"
@@ -14,9 +14,14 @@ import (
 type ChannelType uint16
 
 const (
+	//无效
 	None ChannelType = iota
-	Status
-	Chat
+	//状态
+	StatusChannel
+	//聊天
+	ChatChannel
+	//事件
+	EventChannel
 )
 
 //频道实体
@@ -92,6 +97,10 @@ func (c *ChannelEntity) UID() string {
 
 func (c *ChannelEntity) NickName() string {
 	return c.ChanName
+}
+
+func (c *ChannelEntity) EntityType() EntityType {
+	return EntityChannel
 }
 
 func (c *ChannelEntity) InitEntity() {

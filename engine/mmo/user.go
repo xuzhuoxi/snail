@@ -3,7 +3,7 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package world
+package mmo
 
 import (
 	"github.com/pkg/errors"
@@ -69,6 +69,10 @@ func (e *UserEntity) NickName() string {
 	return e.Nick
 }
 
+func (e *UserEntity) EntityType() EntityType {
+	return EntityUser
+}
+
 func (e *UserEntity) InitEntity() {
 	e.ChannelSubscriber = NewChannelSubscriber()
 	e.VariableSupport = NewVariableSupport()
@@ -89,8 +93,14 @@ func (e *UserEntity) CurrentRoom() string {
 func (e *UserEntity) SetWorldLocation(zoneId string, roomId string) {
 	e.attrMu.Lock()
 	defer e.attrMu.Unlock()
-	e.ZoneId = zoneId
-	e.RoomId = roomId
+	if zoneId != e.ZoneId {
+		e.ZoneId = zoneId
+		e.ChannelSubscriber.TouchChannel(zoneId)
+	}
+	if roomId != e.RoomId {
+		e.RoomId = roomId
+		e.ChannelSubscriber.TouchChannel(roomId)
+	}
 }
 
 func (e *UserEntity) CurrentPos() XYZ {
