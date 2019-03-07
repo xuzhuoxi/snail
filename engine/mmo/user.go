@@ -19,11 +19,12 @@ type IUserEntity interface {
 
 	//用户名
 	UserName() string
-	CurrentZone() string
-	CurrentRoom() string
-	SetWorldLocation(zoneId string, roomId string)
-	CurrentPos() XYZ
-	SetPos(pos XYZ)
+
+	GetLocation() (zoneId string, roomId string)
+	SetZone(zoneId string, roomId string)
+	SetRoom(roomId string)
+	GetPosition() XYZ
+	SetPosition(pos XYZ)
 }
 
 //玩家索引
@@ -50,11 +51,13 @@ type UserEntity struct {
 	Addr   string
 	ZoneId string
 	RoomId string
-	Pos    XYZ
-	attrMu sync.RWMutex
+	locMu  sync.RWMutex
 
-	ChannelSubscriber *ChannelSubscriber
-	VariableSupport   *VariableSupport
+	Pos   XYZ
+	posMu sync.RWMutex
+
+	ChannelSubscriber
+	VariableSupport
 }
 
 func (e *UserEntity) UID() string {
@@ -74,81 +77,49 @@ func (e *UserEntity) EntityType() EntityType {
 }
 
 func (e *UserEntity) InitEntity() {
-	e.ChannelSubscriber = NewChannelSubscriber()
-	e.VariableSupport = NewVariableSupport()
+	e.ChannelSubscriber = *NewChannelSubscriber()
+	e.VariableSupport = *NewVariableSupport()
 }
 
-func (e *UserEntity) CurrentZone() string {
-	e.attrMu.RLock()
-	defer e.attrMu.RUnlock()
-	return e.ZoneId
+func (e *UserEntity) GetLocation() (zoneId string, roomId string) {
+	e.locMu.RLock()
+	defer e.locMu.RUnlock()
+	return e.ZoneId, e.RoomId
 }
 
-func (e *UserEntity) CurrentRoom() string {
-	e.attrMu.RLock()
-	defer e.attrMu.RUnlock()
-	return e.RoomId
-}
-
-func (e *UserEntity) SetWorldLocation(zoneId string, roomId string) {
-	e.attrMu.Lock()
-	defer e.attrMu.Unlock()
+func (e *UserEntity) SetZone(zoneId string, roomId string) {
+	e.locMu.Lock()
+	defer e.locMu.Unlock()
 	if zoneId != e.ZoneId {
 		e.ZoneId = zoneId
-		e.ChannelSubscriber.TouchChannel(zoneId)
+		e.ChannelSubscriber.AddWhiteChannel(zoneId)
 	}
 	if roomId != e.RoomId {
 		e.RoomId = roomId
-		e.ChannelSubscriber.TouchChannel(roomId)
+		e.ChannelSubscriber.AddWhiteChannel(roomId)
 	}
 }
 
-func (e *UserEntity) CurrentPos() XYZ {
-	e.attrMu.RLock()
-	defer e.attrMu.RUnlock()
+func (e *UserEntity) SetRoom(roomId string) {
+	e.locMu.Lock()
+	defer e.locMu.Unlock()
+	if roomId == e.RoomId {
+		return
+	}
+	e.RoomId = roomId
+	e.ChannelSubscriber.AddWhiteChannel(roomId)
+}
+
+func (e *UserEntity) GetPosition() XYZ {
+	e.posMu.RLock()
+	defer e.posMu.RUnlock()
 	return e.Pos
 }
 
-func (e *UserEntity) SetPos(pos XYZ) {
-	e.attrMu.Lock()
-	defer e.attrMu.Unlock()
+func (e *UserEntity) SetPosition(pos XYZ) {
+	e.posMu.Lock()
+	defer e.posMu.Unlock()
 	e.Pos = pos
-}
-
-func (e *UserEntity) TouchingChannels() []string {
-	return e.ChannelSubscriber.TouchingChannels()
-}
-
-func (e *UserEntity) CopyTouchingChannels() []string {
-	return e.ChannelSubscriber.CopyTouchingChannels()
-}
-
-func (e *UserEntity) TouchChannel(chanId string) error {
-	return e.ChannelSubscriber.TouchChannel(chanId)
-}
-
-func (e *UserEntity) UnTouchChannel(chanId string) error {
-	return e.ChannelSubscriber.UnTouchChannel(chanId)
-}
-
-func (e *UserEntity) InChannel(chanId string) bool {
-	return e.ChannelSubscriber.InChannel(chanId)
-}
-
-func (e *UserEntity) SetVar(key string, value interface{}) {
-	e.VariableSupport.SetVar(key, value)
-}
-
-func (e *UserEntity) GetVar(key string) interface{} {
-	return e.VariableSupport.GetVar(key)
-}
-
-func (e *UserEntity) CheckVar(key string) bool {
-	return e.VariableSupport.CheckVar(key)
-}
-
-func (e *UserEntity) RemoveVar(key string) {
-	e.VariableSupport.RemoveVar(key)
 }
 
 //-----------------------------------------------

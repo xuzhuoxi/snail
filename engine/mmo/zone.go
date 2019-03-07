@@ -10,21 +10,14 @@ import (
 	"sync"
 )
 
+//区域实体
 type IZoneEntity interface {
 	IEntity
 	IEntityOwner
 	IInitEntity
-	IChannelBehavior
-	IVariableSupport
 
-	//添加房间
-	AddRoom(roomId string) error
-	//移除房间
-	RemoveRoom(roomId string) error
-	//检查房间存在性
-	ContainRoom(roomId string) bool
-	//房间列表
-	RoomList() []string
+	IRoomGroup
+	IVariableSupport
 }
 
 type IZoneIndex interface {
@@ -54,13 +47,12 @@ func NewZoneEntity(zoneId string, zoneName string) *ZoneEntity {
 }
 
 type ZoneEntity struct {
-	ZoneId    string
-	ZoneName  string
-	RoomGroup *EntityListGroup
-
+	ZoneId   string
+	ZoneName string
 	EntityOwnerSupport
-	ChannelEntity   *ChannelEntity
-	VariableSupport *VariableSupport
+
+	RoomGroup *EntityListGroup
+	VariableSupport
 }
 
 func (e *ZoneEntity) UID() string {
@@ -76,62 +68,24 @@ func (e *ZoneEntity) EntityType() EntityType {
 }
 
 func (e *ZoneEntity) InitEntity() {
-	e.RoomGroup = NewEntityListGroup(e.ZoneId, e.ZoneName, EntityRoom)
-	e.ChannelEntity = NewChannelEntity(e.ZoneId, e.ZoneName)
-	e.VariableSupport = NewVariableSupport()
-	e.ChannelEntity.InitEntity()
-}
-
-func (e *ZoneEntity) AddRoom(roomId string) error {
-	return e.RoomGroup.AppendEntity(roomId)
-}
-
-func (e *ZoneEntity) RemoveRoom(roomId string) error {
-	return e.RoomGroup.RemoveEntity(roomId)
-}
-
-func (e *ZoneEntity) ContainRoom(roomId string) bool {
-	return e.RoomGroup.CheckEntity(roomId)
+	e.RoomGroup = NewEntityListGroup(EntityRoom)
+	e.VariableSupport = *NewVariableSupport()
 }
 
 func (e *ZoneEntity) RoomList() []string {
 	return e.RoomGroup.Entities()
 }
 
-func (e *ZoneEntity) MyChannel() IChannelEntity {
-	return e.ChannelEntity
+func (e *ZoneEntity) ContainRoom(roomId string) bool {
+	return e.RoomGroup.ContainEntity(roomId)
 }
 
-func (e *ZoneEntity) TouchChannel(subscriber string) {
-	e.ChannelEntity.TouchChannel(subscriber)
+func (e *ZoneEntity) AddRoom(roomId string) error {
+	return e.RoomGroup.Accept(roomId)
 }
 
-func (e *ZoneEntity) UnTouchChannel(subscriber string) {
-	e.ChannelEntity.UnTouchChannel(subscriber)
-}
-
-func (e *ZoneEntity) Broadcast(speaker string, handler func(receiver string)) int {
-	return e.ChannelEntity.Broadcast(speaker, handler)
-}
-
-func (e *ZoneEntity) BroadcastSome(speaker string, receiver []string, handler func(receiver string)) int {
-	return e.ChannelEntity.BroadcastSome(speaker, receiver, handler)
-}
-
-func (e *ZoneEntity) SetVar(key string, value interface{}) {
-	e.VariableSupport.SetVar(key, value)
-}
-
-func (e *ZoneEntity) GetVar(key string) interface{} {
-	return e.VariableSupport.GetVar(key)
-}
-
-func (e *ZoneEntity) CheckVar(key string) bool {
-	return e.VariableSupport.CheckVar(key)
-}
-
-func (e *ZoneEntity) RemoveVar(key string) {
-	e.VariableSupport.RemoveVar(key)
+func (e *ZoneEntity) RemoveRoom(roomId string) error {
+	return e.RoomGroup.Drop(roomId)
 }
 
 //-----------------------------------------------

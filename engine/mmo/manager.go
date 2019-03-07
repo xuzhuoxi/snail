@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-type IWorldManager interface {
+type IEntityCreator interface {
 	//构造世界
 	CreateWorld()
 	//构造区域
@@ -20,6 +20,9 @@ type IWorldManager interface {
 	CreateRoomAt(roomId string, roomName string, ownerId string) (IRoomEntity, error)
 	//构造频道
 	CreateChannel(chanId string, chanName string) (IChannelEntity, error)
+}
+
+type IEntityGetter interface {
 	//获取区域实例
 	GetZone(zoneId string) (IZoneEntity, bool)
 	//获取房间实例
@@ -28,18 +31,29 @@ type IWorldManager interface {
 	GetUser(userId string) (IUserEntity, bool)
 	//获取频道实例
 	GetChannel(chanId string) (IChannelEntity, bool)
+}
 
+type IChannelManager interface {
+	//订阅频道
+	TouchChannel(chanId string, subscriber string)
+	//取消频道订阅
+	UnTouchChannel(chanId string, subscriber string)
+}
+
+type IUserBehavior interface {
 	//加入世界
 	EnterWorld(user IUserEntity, roomId string) error
 	//离开世界
 	ExitWorld(userId string) error
 	//在世界转移
 	Transfer(userId string, toRoomId string) error
+}
 
-	//订阅频道
-	TouchChannel(chanId string, subscriber string)
-	//取消频道订阅
-	UnTouchChannel(chanId string, subscriber string)
+type IWorldManager interface {
+	IEntityCreator
+	IChannelManager
+	IEntityGetter
+	IUserBehavior
 }
 
 type WorldManager struct {
@@ -109,41 +123,37 @@ func (w *WorldManager) CreateChannel(chanId string, chanName string) (IChannelEn
 func (w *WorldManager) GetZone(zoneId string) (IZoneEntity, bool) {
 	w.createMu.RLock()
 	defer w.createMu.RUnlock()
-	zone := w.ZoneIndex.GetZone(zoneId)
-	if nil == zone {
-		return nil, false
+	if zone := w.ZoneIndex.GetZone(zoneId); nil != zone {
+		return zone, true
 	}
-	return zone, true
+	return nil, false
 }
 
 func (w *WorldManager) GetRoom(roomId string) (IRoomEntity, bool) {
 	w.createMu.RLock()
 	defer w.createMu.RUnlock()
-	room := w.RoomIndex.GetRoom(roomId)
-	if nil == room {
-		return nil, false
+	if room := w.RoomIndex.GetRoom(roomId); nil != room {
+		return room, true
 	}
-	return room, true
+	return nil, false
 }
 
 func (w *WorldManager) GetUser(userId string) (IUserEntity, bool) {
 	w.createMu.RLock()
 	defer w.createMu.RUnlock()
-	user := w.UserIndex.GetUser(userId)
-	if nil == user {
-		return nil, false
+	if user := w.UserIndex.GetUser(userId); nil != user {
+		return user, true
 	}
-	return user, true
+	return nil, false
 }
 
 func (w *WorldManager) GetChannel(chanId string) (IChannelEntity, bool) {
 	w.createMu.RLock()
 	defer w.createMu.RUnlock()
-	channel := w.ChannelIndex.GetChannel(chanId)
-	if nil == channel {
-		return nil, false
+	if channel := w.ChannelIndex.GetChannel(chanId); nil != channel {
+		return channel, true
 	}
-	return channel, true
+	return nil, false
 }
 
 func (w *WorldManager) EnterWorld(user IUserEntity, roomId string) error {
@@ -162,12 +172,8 @@ func (w *WorldManager) EnterWorld(user IUserEntity, roomId string) error {
 	}
 	w.UserIndex.UpdateUser(user)
 	room := w.RoomIndex.GetRoom(roomId)
-	room.EnterRoom(userId)
-	user.SetWorldLocation(room.GetOwner(), roomId)
-	if zone, ok := w.GetZone(room.GetOwner()); ok { //加入区频道
-		zone.TouchChannel(userId)
-	}
-	w.world.TouchChannel(userId) //加入世界频道
+	room.AcceptUser(userId)
+	user.SetZone(room.GetOwner(), roomId)
 	return nil
 }
 
@@ -178,15 +184,10 @@ func (w *WorldManager) ExitWorld(userId string) error {
 		return errors.New("WorldManager.ExitWorld Error: User() does not exist")
 	}
 	user := w.UserIndex.GetUser(userId)
-	roomId := user.CurrentRoom()
+	_, roomId := user.GetLocation()
 	if room := w.RoomIndex.GetRoom(roomId); nil != room {
-		room.LeaveRoom(userId)
+		room.DropUser(userId)
 	}
-	zoneId := user.CurrentZone()
-	if zone := w.ZoneIndex.GetZone(zoneId); nil != zone {
-		zone.UnTouchChannel(userId)
-	}
-	w.world.UnTouchChannel(userId)
 	return nil
 }
 
@@ -200,39 +201,28 @@ func (w *WorldManager) Transfer(userId string, toRoomId string) error {
 		return errors.New(fmt.Sprintf("EnterWorld Error: Target room(%s) does not exist", toRoomId))
 	}
 	user := w.UserIndex.GetUser(userId)
-	room := w.RoomIndex.GetRoom(toRoomId)
-	if user.CurrentRoom() == toRoomId || room.ContainUser(userId) {
+	_, roomId := user.GetLocation()
+	if roomId == toRoomId {
 		return errors.New(fmt.Sprintf("EnterWorld Error: user(%s) already in the room(%s)", userId, toRoomId))
 	}
-	//离开当前
-	err := w.exitCurrentRoom(user)
-	if nil != err {
-		return err
-	}
-	//进入新的
-	if user.CurrentRoom() != toRoomId {
-		user.SetWorldLocation(room.GetOwner(), toRoomId)
-	}
-	if !room.ContainUser(userId) {
-		room.EnterRoom(userId)
-	}
+	w.exitCurrentRoom(user)
+	toRoom := w.RoomIndex.GetRoom(toRoomId)
+	toRoom.AcceptUser(userId)
+	user.SetZone(toRoom.GetOwner(), toRoomId)
 	return nil
 }
 
 func (w *WorldManager) exitCurrentRoom(user IUserEntity) error {
-	if nil == user {
-		return errors.New("WorldManager.exitCurrentRoom Error: user is nil")
-	}
-	roomId := user.CurrentRoom()
+	_, roomId := user.GetLocation()
 	if "" == roomId || !w.RoomIndex.CheckRoom(roomId) {
 		return errors.New("WorldManager.exitCurrentRoom Error: room is nil")
 	}
 	room := w.RoomIndex.GetRoom(roomId)
 	userId := user.UID()
 	if room.ContainUser(userId) {
-		room.LeaveRoom(userId)
+		room.DropUser(userId)
 	}
-	user.SetWorldLocation(user.CurrentZone(), "")
+	user.SetRoom("")
 	return nil
 }
 

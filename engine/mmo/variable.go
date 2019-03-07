@@ -12,6 +12,7 @@ type VarSet map[string]interface{}
 //变量列表
 type IVariableSupport interface {
 	SetVar(key string, value interface{})
+	SetVarMap(kv map[string]interface{})
 	GetVar(key string) interface{}
 
 	CheckVar(key string) bool
@@ -37,6 +38,14 @@ func (s *VariableSupport) SetVar(key string, value interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.set[key] = value
+}
+
+func (s *VariableSupport) SetVarMap(kv map[string]interface{}) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for k, v := range kv {
+		s.set[k] = v
+	}
 }
 
 func (s *VariableSupport) GetVar(key string) interface{} {

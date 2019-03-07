@@ -11,12 +11,41 @@ import (
 	"sync"
 )
 
+type IZoneGroup interface {
+	//区域列表
+	ZoneList() []string
+	//检查区域存在性
+	ContainZone(zoneId string) bool
+	//添加区域
+	AddZone(zoneId string) error
+	//移除区域
+	RemoveZone(zoneId string) error
+}
+
+type IRoomGroup interface {
+	//房间列表
+	RoomList() []string
+	//检查房间存在性
+	ContainRoom(roomId string) bool
+	//添加房间
+	AddRoom(roomId string) error
+	//移除房间
+	RemoveRoom(roomId string) error
+}
+
+type IUserGroup interface {
+	//用户列表
+	UserList() []string
+	//检查用户
+	ContainUser(userId string) bool
+	//加入用户,进行唯一性检查
+	AcceptUser(userId string) error
+	//从组中移除用户
+	DropUser(userId string) error
+}
+
 //组
 type IEntityGroup interface {
-	//组id
-	GroupId() string
-	//组名称
-	GroupName() string
 	//接纳实体的类型
 	EntityType() EntityType
 	//包含实体id
@@ -24,47 +53,40 @@ type IEntityGroup interface {
 	//包含实体id
 	CopyEntities() []string
 	//检查实体是否属于当前组
-	CheckEntity(entityId string) bool
+	ContainEntity(entityId string) bool
+
 	//加入实体到组,进行唯一性检查
-	AppendEntity(entityId string) error
+	Accept(entityId string) error
+	//加入实体到组,进行唯一性检查
+	AcceptMulti(entityId []string) (count int, err error)
 	//从组中移除实体
-	RemoveEntity(entityId string) error
+	Drop(entityId string) error
+	//从组中移除实体
+	DropMulti(entityId []string) (count int, err error)
 }
 
-func NewIEntityGroup(groupId string, groupName string, entityType EntityType, userMap bool) IEntityGroup {
+func NewIEntityGroup(entityType EntityType, userMap bool) IEntityGroup {
 	if userMap {
-		return NewEntityMapGroup(groupId, groupName, entityType)
+		return NewEntityMapGroup(entityType)
 	} else {
-		return NewEntityListGroup(groupId, groupName, entityType)
+		return NewEntityListGroup(entityType)
 	}
 }
 
-func NewEntityListGroup(groupId string, groupName string, entityType EntityType) *EntityListGroup {
-	return &EntityListGroup{groupId: groupId, groupName: groupName, entityType: entityType}
+func NewEntityListGroup(entityType EntityType) *EntityListGroup {
+	return &EntityListGroup{entityType: entityType}
 }
 
-func NewEntityMapGroup(groupId string, groupName string, entityType EntityType) *EntityMapGroup {
-	return &EntityMapGroup{groupId: groupId, groupName: groupName, entityType: entityType}
+func NewEntityMapGroup(entityType EntityType) *EntityMapGroup {
+	return &EntityMapGroup{entityType: entityType}
 }
 
 //------------------------------
 
-var defaultEntityMapGroupValue = struct{}{}
-
 type EntityMapGroup struct {
-	groupId    string
-	groupName  string
 	entityType EntityType
-	entityMap  map[string]struct{}
+	entityMap  map[string]*struct{}
 	entityMu   sync.RWMutex
-}
-
-func (g *EntityMapGroup) GroupId() string {
-	return g.groupId
-}
-
-func (g *EntityMapGroup) GroupName() string {
-	return g.groupName
 }
 
 func (g *EntityMapGroup) EntityType() EntityType {
@@ -85,40 +107,74 @@ func (g *EntityMapGroup) CopyEntities() []string {
 	return rs
 }
 
-func (g *EntityMapGroup) CheckEntity(entityId string) bool {
+func (g *EntityMapGroup) ContainEntity(entityId string) bool {
 	g.entityMu.RLock()
 	defer g.entityMu.RUnlock()
 	_, ok := g.entityMap[entityId]
 	return ok
 }
 
-func (g *EntityMapGroup) AppendEntity(entityId string) error {
+func (g *EntityMapGroup) Accept(entityId string) error {
 	g.entityMu.Lock()
 	defer g.entityMu.Unlock()
 	_, ok := g.entityMap[entityId]
 	if ok {
-		return errors.New("EntityMapGroup.AppendEntity Error: Entity(" + entityId + ") Duplicate")
+		return errors.New("EntityMapGroup.Accept Error: Entity(" + entityId + ") Duplicate")
 	}
-	g.entityMap[entityId] = defaultEntityMapGroupValue
+	g.entityMap[entityId] = nil
 	return nil
 }
 
-func (g *EntityMapGroup) RemoveEntity(entityId string) error {
+func (g *EntityMapGroup) AcceptMulti(entityId []string) (count int, err error) {
+	g.entityMu.Lock()
+	defer g.entityMu.Unlock()
+	if len(entityId) == 0 {
+		return 0, errors.New("EntityMapGroup.AcceptMulti Error: len = 0")
+	}
+	for _, id := range entityId {
+		_, ok := g.entityMap[id]
+		if ok && nil != err {
+			err = errors.New("EntityMapGroup.AcceptMulti Error: Entity Duplicate")
+			continue
+		}
+		count++
+		g.entityMap[id] = nil
+	}
+	return
+}
+
+func (g *EntityMapGroup) Drop(entityId string) error {
 	g.entityMu.Lock()
 	defer g.entityMu.Unlock()
 	_, ok := g.entityMap[entityId]
 	if !ok {
-		return errors.New("EntityMapGroup.RemoveEntity Error: No Entity(" + entityId + ")")
+		return errors.New("EntityMapGroup.Drop Error: No Entity(" + entityId + ")")
 	}
 	delete(g.entityMap, entityId)
 	return nil
 }
 
+func (g *EntityMapGroup) DropMulti(entityId []string) (count int, err error) {
+	g.entityMu.Lock()
+	defer g.entityMu.Unlock()
+	if len(entityId) == 0 {
+		return 0, errors.New("EntityMapGroup.DropMulti Error: len = 0")
+	}
+	for _, id := range entityId {
+		_, ok := g.entityMap[id]
+		if !ok && nil != err {
+			err = errors.New("EntityMapGroup.DropMulti Error: No Entity")
+			continue
+		}
+		count++
+		delete(g.entityMap, id)
+	}
+	return
+}
+
 //---------------------------------------
 
 type EntityListGroup struct {
-	groupId    string
-	groupName  string
 	entityType EntityType
 	entityList []string
 	entityMu   sync.RWMutex
@@ -126,14 +182,6 @@ type EntityListGroup struct {
 
 func (g *EntityListGroup) EntityType() EntityType {
 	return g.entityType
-}
-
-func (g *EntityListGroup) GroupId() string {
-	return g.groupId
-}
-
-func (g *EntityListGroup) GroupName() string {
-	return g.groupName
 }
 
 func (g *EntityListGroup) Entities() []string {
@@ -148,31 +196,67 @@ func (g *EntityListGroup) CopyEntities() []string {
 	return slicex.CopyString(g.entityList)
 }
 
-func (g *EntityListGroup) CheckEntity(entityId string) bool {
+func (g *EntityListGroup) ContainEntity(entityId string) bool {
 	g.entityMu.RLock()
 	defer g.entityMu.RUnlock()
 	_, ok := slicex.IndexString(g.entityList, entityId)
 	return ok
 }
 
-func (g *EntityListGroup) AppendEntity(entityId string) error {
+func (g *EntityListGroup) Accept(entityId string) error {
 	g.entityMu.Lock()
 	defer g.entityMu.Unlock()
 	_, ok := slicex.IndexString(g.entityList, entityId)
 	if ok {
-		return errors.New("EntityListGroup.AppendEntity Error: Entity(" + entityId + ") Duplicate")
+		return errors.New("EntityListGroup.Accept Error: Entity(" + entityId + ") Duplicate")
 	}
 	g.entityList = append(g.entityList, entityId)
 	return nil
 }
 
-func (g *EntityListGroup) RemoveEntity(entityId string) error {
+func (g *EntityListGroup) AcceptMulti(entityId []string) (count int, err error) {
+	g.entityMu.Lock()
+	defer g.entityMu.Unlock()
+	if len(entityId) == 0 {
+		return 0, errors.New("EntityListGroup.AcceptMulti Error: len = 0")
+	}
+	for _, id := range entityId {
+		_, ok := slicex.IndexString(g.entityList, id)
+		if ok && nil != err {
+			err = errors.New("EntityListGroup.AcceptMulti Error: Entity Duplicate")
+			continue
+		}
+		count++
+		g.entityList = append(g.entityList, id)
+	}
+	return
+}
+
+func (g *EntityListGroup) Drop(entityId string) error {
 	g.entityMu.Lock()
 	defer g.entityMu.Unlock()
 	index, ok := slicex.IndexString(g.entityList, entityId)
 	if !ok {
-		return errors.New("EntityListGroup.RemoveEntity Error: No Entity(" + entityId + ")")
+		return errors.New("EntityListGroup.Drop Error: No Entity(" + entityId + ")")
 	}
 	g.entityList = append(g.entityList[:index], g.entityList[index+1:]...)
 	return nil
+}
+
+func (g *EntityListGroup) DropMulti(entityId []string) (count int, err error) {
+	g.entityMu.Lock()
+	defer g.entityMu.Unlock()
+	if len(entityId) == 0 {
+		return 0, errors.New("EntityListGroup.DropMulti Error: len = 0")
+	}
+	for _, id := range entityId {
+		index, ok := slicex.IndexString(g.entityList, id)
+		if !ok && nil != err {
+			err = errors.New("EntityListGroup.DropMulti Error: No Entity")
+			continue
+		}
+		count++
+		g.entityList = append(g.entityList[:index], g.entityList[index+1:]...)
+	}
+	return
 }
