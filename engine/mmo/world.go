@@ -15,8 +15,8 @@ type IWorldEntity interface {
 
 //-----------------------------------------------
 
-func CreateWorldEntity() IWorldEntity {
-	return &WorldEntity{}
+func CreateWorldEntity(worldId string, worldName string) IWorldEntity {
+	return &WorldEntity{WorldId: worldId, WorldName: worldName}
 }
 
 type WorldEntity struct {

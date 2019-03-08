@@ -8,6 +8,7 @@ package mmo
 import (
 	"errors"
 	"fmt"
+	"github.com/xuzhuoxi/infra-go/slicex"
 	"sync"
 )
 
@@ -33,12 +34,12 @@ type IEntityGetter interface {
 	GetChannel(chanId string) (IChannelEntity, bool)
 }
 
-type IChannelManager interface {
-	//订阅频道
-	TouchChannel(chanId string, subscriber string)
-	//取消频道订阅
-	UnTouchChannel(chanId string, subscriber string)
-}
+//type IChannelManager interface {
+//	//订阅频道
+//	TouchChannel(chanId string, subscriber string)
+//	//取消频道订阅
+//	UnTouchChannel(chanId string, subscriber string)
+//}
 
 type IUserBehavior interface {
 	//加入世界
@@ -51,7 +52,7 @@ type IUserBehavior interface {
 
 type IWorldManager interface {
 	IEntityCreator
-	IChannelManager
+	//IChannelManager
 	IEntityGetter
 	IUserBehavior
 }
@@ -67,8 +68,8 @@ type WorldManager struct {
 	transferMu sync.Mutex
 }
 
-func (w *WorldManager) CreateWorld() {
-	w.world = CreateWorldEntity()
+func (w *WorldManager) CreateWorld(worldId string, worldName string) {
+	w.world = CreateWorldEntity(worldId, worldName)
 	w.world.InitEntity()
 	w.ZoneIndex = NewIZoneIndex()
 	w.RoomIndex = NewIRoomIndex()
@@ -120,6 +121,8 @@ func (w *WorldManager) CreateChannel(chanId string, chanName string) (IChannelEn
 	return channel, nil
 }
 
+//----------------------------
+
 func (w *WorldManager) GetZone(zoneId string) (IZoneEntity, bool) {
 	w.createMu.RLock()
 	defer w.createMu.RUnlock()
@@ -155,6 +158,8 @@ func (w *WorldManager) GetChannel(chanId string) (IChannelEntity, bool) {
 	}
 	return nil, false
 }
+
+//----------------------------
 
 func (w *WorldManager) EnterWorld(user IUserEntity, roomId string) error {
 	w.transferMu.Lock()
@@ -226,14 +231,74 @@ func (w *WorldManager) exitCurrentRoom(user IUserEntity) error {
 	return nil
 }
 
-func (w *WorldManager) TouchChannel(chanId string, subscriber string) {
-	if channel := w.ChannelIndex.GetChannel(chanId); nil != channel {
-		channel.TouchChannel(subscriber)
+//----------------------------------
+
+func (w *WorldManager) Broadcast(speaker string, broadcastType BroadcastType, handler func(entity IUserEntity)) error {
+	if !w.UserIndex.CheckUser(speaker) {
+		return errors.New(fmt.Sprintf("Speaker(%s) does not exist", speaker))
+	}
+	userEntity := w.UserIndex.GetUser(speaker)
+	zoneId, roomId := userEntity.GetLocation()
+	switch broadcastType {
+	case BroadcastWorld:
+		w.broadcastWorld(userEntity, handler)
+	case BroadcastZone:
+		w.broadcastZone(userEntity, zoneId, handler)
+	case BroadcastRoom:
+		w.broadcastRoom(userEntity, roomId, handler)
+	}
+	return nil
+}
+
+func (w *WorldManager) broadcastWorld(speaker IUserEntity, handler func(entity IUserEntity)) {
+	if speaker.OnBlackChannel(w.world.UID()) {
+		return
+	}
+	zones := w.world.ZoneList()
+	for _, zoneId := range zones {
+		if speaker.OnBlackChannel(zoneId) {
+			continue
+		}
+		w.broadcastZone(speaker, zoneId, handler)
 	}
 }
 
-func (w *WorldManager) UnTouchChannel(chanId string, subscriber string) {
-	if channel := w.ChannelIndex.GetChannel(chanId); nil != channel {
-		channel.UnTouchChannel(subscriber)
+func (w *WorldManager) broadcastZone(speaker IUserEntity, zoneId string, handler func(entity IUserEntity)) {
+	if "" == zoneId || !w.ZoneIndex.CheckZone(zoneId) || !speaker.OnBlackChannel(zoneId) {
+		return
+	}
+	rooms := w.ZoneIndex.GetZone(zoneId).RoomList()
+	for _, roomId := range rooms {
+		if speaker.OnBlackChannel(roomId) {
+			continue
+		}
+		w.broadcastRoom(speaker, zoneId, handler)
 	}
 }
+
+func (w *WorldManager) broadcastRoom(speaker IUserEntity, roomId string, handler func(entity IUserEntity)) {
+	if "" == roomId || !w.RoomIndex.CheckRoom(roomId) || speaker.OnBlackChannel(roomId) {
+		return
+	}
+	copyUsers := slicex.CopyString(w.RoomIndex.GetRoom(roomId).UserList())
+	for _, userId := range copyUsers {
+		if speaker.OnBlackChannel(userId) || !w.UserIndex.CheckUser(userId) {
+			continue
+		}
+		handler(w.UserIndex.GetUser(userId))
+	}
+}
+
+//--------------------------------------
+
+//func (w *WorldManager) TouchChannel(chanId string, subscriber string) {
+//	if channel := w.ChannelIndex.GetChannel(chanId); nil != channel {
+//		channel.TouchChannel(subscriber)
+//	}
+//}
+//
+//func (w *WorldManager) UnTouchChannel(chanId string, subscriber string) {
+//	if channel := w.ChannelIndex.GetChannel(chanId); nil != channel {
+//		channel.UnTouchChannel(subscriber)
+//	}
+//}
