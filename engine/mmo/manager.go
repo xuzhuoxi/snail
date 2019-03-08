@@ -14,11 +14,16 @@ import (
 
 type IEntityCreator interface {
 	//构造世界
-	CreateWorld()
+	CreateWorld(worldId string, worldName string)
 	//构造区域
 	CreateZone(zoneId string, zoneName string) (IZoneEntity, error)
 	//构造房间
 	CreateRoomAt(roomId string, roomName string, ownerId string) (IRoomEntity, error)
+
+	//创建队伍
+	CreateTeam(userId string) (ITeamEntity, error)
+	//创建团队
+	CreateCorps(teamId string) (ITeamCorpsEntity, error)
 	//构造频道
 	CreateChannel(chanId string, chanName string) (IChannelEntity, error)
 }
@@ -30,6 +35,10 @@ type IEntityGetter interface {
 	GetRoom(roomId string) (IRoomEntity, bool)
 	//获取用户实例
 	GetUser(userId string) (IUserEntity, bool)
+	//获取队伍实例
+	GetTeam(teamId string) (ITeamEntity, bool)
+	//获取队伍实例
+	GetCorps(corpsId string) (ITeamCorpsEntity, bool)
 	//获取频道实例
 	GetChannel(chanId string) (IChannelEntity, bool)
 }
@@ -61,6 +70,8 @@ type WorldManager struct {
 	ZoneIndex    IZoneIndex
 	RoomIndex    IRoomIndex
 	UserIndex    IUserIndex
+	TeamIndex    ITeamIndex
+	CorpsIndex   ITeamCorpsIndex
 	ChannelIndex IChannelIndex
 
 	world      IWorldEntity
@@ -69,17 +80,20 @@ type WorldManager struct {
 }
 
 func (w *WorldManager) CreateWorld(worldId string, worldName string) {
+	if nil != w.world {
+		return
+	}
 	w.world = CreateWorldEntity(worldId, worldName)
 	w.world.InitEntity()
 	w.ZoneIndex = NewIZoneIndex()
 	w.RoomIndex = NewIRoomIndex()
 	w.UserIndex = NewIUserIndex()
+	w.TeamIndex = NewITeamIndex()
+	w.CorpsIndex = NewITeamCorpsIndex()
 	w.ChannelIndex = NewIChannelIndex()
 }
 
 func (w *WorldManager) CreateZone(zoneId string, zoneName string) (IZoneEntity, error) {
-	w.createMu.Lock()
-	defer w.createMu.Unlock()
 	if w.ZoneIndex.CheckZone(zoneId) {
 		return nil, errors.New("WorldManager.CreateZone Error: ZoneId(" + zoneId + ") Duplicate!")
 	}
@@ -91,8 +105,6 @@ func (w *WorldManager) CreateZone(zoneId string, zoneName string) (IZoneEntity, 
 }
 
 func (w *WorldManager) CreateRoomAt(roomId string, roomName string, ownerId string) (IRoomEntity, error) {
-	w.createMu.Lock()
-	defer w.createMu.Unlock()
 	if w.RoomIndex.CheckRoom(roomId) {
 		return nil, errors.New("WorldManager.CreateRoomAt Error: RoomId(" + roomId + ") Duplicate!")
 	}
@@ -108,6 +120,16 @@ func (w *WorldManager) CreateRoomAt(roomId string, roomName string, ownerId stri
 		zone.AddRoom(roomId)
 	}
 	return room, nil
+}
+
+func (w *WorldManager) CreateTeam(userId string) (ITeamEntity, error) {
+	w.createMu.Lock()
+	defer w.createMu.Unlock()
+	panic("implement me")
+}
+
+func (w *WorldManager) CreateCorps(teamId string) (ITeamCorpsEntity, error) {
+	panic("implement me")
 }
 
 func (w *WorldManager) CreateChannel(chanId string, chanName string) (IChannelEntity, error) {
@@ -148,6 +170,14 @@ func (w *WorldManager) GetUser(userId string) (IUserEntity, bool) {
 		return user, true
 	}
 	return nil, false
+}
+
+func (w *WorldManager) GetTeam(teamId string) (ITeamEntity, bool) {
+	panic("implement me")
+}
+
+func (w *WorldManager) GetCorps(corpsId string) (ITeamCorpsEntity, bool) {
+	panic("implement me")
 }
 
 func (w *WorldManager) GetChannel(chanId string) (IChannelEntity, bool) {

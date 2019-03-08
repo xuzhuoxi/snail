@@ -22,6 +22,17 @@ type IZoneGroup interface {
 	RemoveZone(zoneId string) error
 }
 
+type ITeamGroup interface {
+	//队伍列表
+	TeamList() []string
+	//检查队伍存在性
+	ContainTeam(roomId string) bool
+	//添加房间
+	AddTeam(roomId string) error
+	//移除房间
+	RemoveTeam(roomId string) error
+}
+
 type IRoomGroup interface {
 	//房间列表
 	RoomList() []string
@@ -48,6 +59,13 @@ type IUserGroup interface {
 type IEntityGroup interface {
 	//接纳实体的类型
 	EntityType() EntityType
+	//最大实例数
+	MaxLen() int
+	//实体数量
+	Len() int
+	//实体已满
+	IsFull() bool
+
 	//包含实体id
 	Entities() []string
 	//包含实体id
@@ -86,11 +104,28 @@ func NewEntityMapGroup(entityType EntityType) *EntityMapGroup {
 type EntityMapGroup struct {
 	entityType EntityType
 	entityMap  map[string]*struct{}
+	max        int
 	entityMu   sync.RWMutex
 }
 
 func (g *EntityMapGroup) EntityType() EntityType {
 	return g.entityType
+}
+
+func (g *EntityMapGroup) MaxLen() int {
+	return g.max
+}
+
+func (g *EntityMapGroup) Len() int {
+	g.entityMu.RLock()
+	defer g.entityMu.RUnlock()
+	return len(g.entityMap)
+}
+
+func (g *EntityMapGroup) IsFull() bool {
+	g.entityMu.RLock()
+	defer g.entityMu.RUnlock()
+	return g.isFull()
 }
 
 func (g *EntityMapGroup) Entities() []string {
@@ -120,6 +155,9 @@ func (g *EntityMapGroup) Accept(entityId string) error {
 	_, ok := g.entityMap[entityId]
 	if ok {
 		return errors.New("EntityMapGroup.Accept Error: Entity(" + entityId + ") Duplicate")
+	}
+	if g.isFull() {
+		return errors.New("EntityMapGroup.Accept Error: Group is Full")
 	}
 	g.entityMap[entityId] = nil
 	return nil
@@ -160,6 +198,9 @@ func (g *EntityMapGroup) DropMulti(entityId []string) (count int, err error) {
 	if len(entityId) == 0 {
 		return 0, errors.New("EntityMapGroup.DropMulti Error: len = 0")
 	}
+	if g.max > 0 && len(g.entityMap)+len(entityId) > g.max {
+		return 0, errors.New("EntityMapGroup.AcceptMulti Error: Overcrowding")
+	}
 	for _, id := range entityId {
 		_, ok := g.entityMap[id]
 		if !ok && nil != err {
@@ -172,16 +213,37 @@ func (g *EntityMapGroup) DropMulti(entityId []string) (count int, err error) {
 	return
 }
 
+func (g *EntityMapGroup) isFull() bool {
+	return g.max > 0 && len(g.entityMap) >= g.max
+}
+
 //---------------------------------------
 
 type EntityListGroup struct {
 	entityType EntityType
 	entityList []string
+	max        int
 	entityMu   sync.RWMutex
 }
 
 func (g *EntityListGroup) EntityType() EntityType {
 	return g.entityType
+}
+
+func (g *EntityListGroup) MaxLen() int {
+	return g.max
+}
+
+func (g *EntityListGroup) Len() int {
+	g.entityMu.RLock()
+	defer g.entityMu.RUnlock()
+	return len(g.entityList)
+}
+
+func (g *EntityListGroup) IsFull() bool {
+	g.entityMu.RLock()
+	defer g.entityMu.RUnlock()
+	return g.isFull()
 }
 
 func (g *EntityListGroup) Entities() []string {
@@ -210,6 +272,9 @@ func (g *EntityListGroup) Accept(entityId string) error {
 	if ok {
 		return errors.New("EntityListGroup.Accept Error: Entity(" + entityId + ") Duplicate")
 	}
+	if g.isFull() {
+		return errors.New("EntityListGroup.Accept Error: Group is Full")
+	}
 	g.entityList = append(g.entityList, entityId)
 	return nil
 }
@@ -219,6 +284,9 @@ func (g *EntityListGroup) AcceptMulti(entityId []string) (count int, err error) 
 	defer g.entityMu.Unlock()
 	if len(entityId) == 0 {
 		return 0, errors.New("EntityListGroup.AcceptMulti Error: len = 0")
+	}
+	if g.max > 0 && len(g.entityList)+len(entityId) > g.max {
+		return 0, errors.New("EntityListGroup.AcceptMulti Error: Overcrowding")
 	}
 	for _, id := range entityId {
 		_, ok := slicex.IndexString(g.entityList, id)
@@ -259,4 +327,8 @@ func (g *EntityListGroup) DropMulti(entityId []string) (count int, err error) {
 		g.entityList = append(g.entityList[:index], g.entityList[index+1:]...)
 	}
 	return
+}
+
+func (g *EntityListGroup) isFull() bool {
+	return g.max > 0 && len(g.entityList) >= g.max
 }

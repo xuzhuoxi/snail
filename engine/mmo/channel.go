@@ -6,7 +6,6 @@
 package mmo
 
 import (
-	"errors"
 	"github.com/xuzhuoxi/infra-go/slicex"
 	"sync"
 )
@@ -42,20 +41,6 @@ type IChannelBehavior interface {
 	Broadcast(speaker string, handler func(receiver string)) int
 	//消息指定目标广播
 	BroadcastSome(speaker string, receiver []string, handler func(receiver string)) int
-}
-
-//频道索引
-type IChannelIndex interface {
-	//检查Channel是否存在
-	CheckChannel(chanId string) bool
-	//获取Channel
-	GetChannel(chanId string) IChannelEntity
-	//从索引中增加一个Channel
-	AddChannel(channel IChannelEntity) error
-	//从索引中移除一个Channel
-	RemoveChannel(chanId string) (IChannelEntity, error)
-	//从索引中更新一个Channel
-	UpdateChannel(channel IChannelEntity) error
 }
 
 //-----------------------------------------------
@@ -142,66 +127,4 @@ func (c *ChannelEntity) BroadcastSome(speaker string, receiver []string, handler
 func (c *ChannelEntity) hasSubscriber(subscriber string) bool {
 	_, ok := slicex.IndexString(c.Subscriber, subscriber)
 	return ok
-}
-
-//-----------------------------------------------
-
-func NewIChannelIndex() IChannelIndex {
-	return &ChannelIndex{chanMap: make(map[string]IChannelEntity)}
-}
-
-func NewChannelIndex() ChannelIndex {
-	return ChannelIndex{chanMap: make(map[string]IChannelEntity)}
-}
-
-type ChannelIndex struct {
-	chanMap map[string]IChannelEntity
-	mu      sync.RWMutex
-}
-
-func (i *ChannelIndex) CheckChannel(chanId string) bool {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	_, ok := i.chanMap[chanId]
-	return ok
-}
-
-func (i *ChannelIndex) GetChannel(chanId string) IChannelEntity {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.chanMap[chanId]
-}
-
-func (i *ChannelIndex) AddChannel(channel IChannelEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == channel {
-		return errors.New("ChannelIndex.AddChannel Error: channel is nil")
-	}
-	chanId := channel.UID()
-	if i.CheckChannel(chanId) {
-		return errors.New("ChannelIndex.AddChannel Error: Channel(" + chanId + ") Duplicate")
-	}
-	i.chanMap[chanId] = channel
-	return nil
-}
-
-func (i *ChannelIndex) RemoveChannel(chanId string) (IChannelEntity, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if e, ok := i.chanMap[chanId]; ok {
-		delete(i.chanMap, chanId)
-		return e, nil
-	}
-	return nil, errors.New("ChannelIndex.RemoveChannel Error: No Channel(" + chanId + ")")
-}
-
-func (i *ChannelIndex) UpdateChannel(channel IChannelEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == channel {
-		return errors.New("ChannelIndex.UpdateChannel Error: Channel is nil")
-	}
-	i.chanMap[channel.UID()] = channel
-	return nil
 }

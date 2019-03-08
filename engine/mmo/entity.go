@@ -13,7 +13,9 @@ const (
 	EntityNone EntityType = iota
 	EntityChannel
 	EntityUser
+	EntityTeam
 	EntityRoom
+	EntityCorps
 	EntityZone
 	EntityWorld
 
