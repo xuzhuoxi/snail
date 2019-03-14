@@ -3,49 +3,17 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package mmo
+package entity
 
 import (
 	"github.com/xuzhuoxi/infra-go/slicex"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
-type ChannelType uint16
-
-const (
-	//无效
-	None ChannelType = iota
-	//状态
-	StatusChannel
-	//聊天
-	ChatChannel
-	//事件
-	EventChannel
-)
-
-//频道实体
-type IChannelEntity interface {
-	IEntity
-	IInitEntity
-	IChannelBehavior
-}
-
-//频道行为
-type IChannelBehavior interface {
-	MyChannel() IChannelEntity
-	//订阅频道
-	TouchChannel(subscriber string)
-	//取消频道订阅
-	UnTouchChannel(subscriber string)
-	//消息广播
-	Broadcast(speaker string, handler func(receiver string)) int
-	//消息指定目标广播
-	BroadcastSome(speaker string, receiver []string, handler func(receiver string)) int
-}
-
 //-----------------------------------------------
 
-func NewIChannelEntity(chanId string, chanName string) IChannelEntity {
+func NewIChannelEntity(chanId string, chanName string) basis.IChannelEntity {
 	return &ChannelEntity{ChanId: chanId, ChanName: chanName}
 }
 
@@ -68,14 +36,14 @@ func (c *ChannelEntity) NickName() string {
 	return c.ChanName
 }
 
-func (c *ChannelEntity) EntityType() EntityType {
-	return EntityChannel
+func (c *ChannelEntity) EntityType() basis.EntityType {
+	return basis.EntityChannel
 }
 
 func (c *ChannelEntity) InitEntity() {
 }
 
-func (c *ChannelEntity) MyChannel() IChannelEntity {
+func (c *ChannelEntity) MyChannel() basis.IChannelEntity {
 	return c
 }
 

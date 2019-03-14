@@ -3,37 +3,24 @@
 //on 2019-03-09.
 //@author xuzhuoxi
 //
-package mmo
+package index
 
 import (
 	"errors"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
-//频道索引
-type IChannelIndex interface {
-	//检查Channel是否存在
-	CheckChannel(chanId string) bool
-	//获取Channel
-	GetChannel(chanId string) IChannelEntity
-	//从索引中增加一个Channel
-	AddChannel(channel IChannelEntity) error
-	//从索引中移除一个Channel
-	RemoveChannel(chanId string) (IChannelEntity, error)
-	//从索引中更新一个Channel
-	UpdateChannel(channel IChannelEntity) error
-}
-
-func NewIChannelIndex() IChannelIndex {
-	return &ChannelIndex{chanMap: make(map[string]IChannelEntity)}
+func NewIChannelIndex() basis.IChannelIndex {
+	return &ChannelIndex{chanMap: make(map[string]basis.IChannelEntity)}
 }
 
 func NewChannelIndex() ChannelIndex {
-	return ChannelIndex{chanMap: make(map[string]IChannelEntity)}
+	return ChannelIndex{chanMap: make(map[string]basis.IChannelEntity)}
 }
 
 type ChannelIndex struct {
-	chanMap map[string]IChannelEntity
+	chanMap map[string]basis.IChannelEntity
 	mu      sync.RWMutex
 }
 
@@ -44,13 +31,13 @@ func (i *ChannelIndex) CheckChannel(chanId string) bool {
 	return ok
 }
 
-func (i *ChannelIndex) GetChannel(chanId string) IChannelEntity {
+func (i *ChannelIndex) GetChannel(chanId string) basis.IChannelEntity {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	return i.chanMap[chanId]
 }
 
-func (i *ChannelIndex) AddChannel(channel IChannelEntity) error {
+func (i *ChannelIndex) AddChannel(channel basis.IChannelEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == channel {
@@ -64,17 +51,17 @@ func (i *ChannelIndex) AddChannel(channel IChannelEntity) error {
 	return nil
 }
 
-func (i *ChannelIndex) RemoveChannel(chanId string) (IChannelEntity, error) {
+func (i *ChannelIndex) RemoveChannel(chanId string) (basis.IChannelEntity, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if e, ok := i.chanMap[chanId]; ok {
 		delete(i.chanMap, chanId)
 		return e, nil
 	}
-	return nil, errors.New("ChannelIndex.RemoveChannel Error: No Channel(" + chanId + ")")
+	return nil, errors.New("ChannelIndex.RemoveBlack Error: No Channel(" + chanId + ")")
 }
 
-func (i *ChannelIndex) UpdateChannel(channel IChannelEntity) error {
+func (i *ChannelIndex) UpdateChannel(channel basis.IChannelEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == channel {

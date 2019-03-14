@@ -3,7 +3,7 @@
 //on 2019-03-08.
 //@author xuzhuoxi
 //
-package mmo
+package entity
 
 import (
 	"fmt"

@@ -3,37 +3,24 @@
 //on 2019-03-09.
 //@author xuzhuoxi
 //
-package mmo
+package index
 
 import (
 	"errors"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
-//玩家索引
-type IUserIndex interface {
-	//检查User是否存在
-	CheckUser(userId string) bool
-	//获取User
-	GetUser(userId string) IUserEntity
-	//添加一个新User到索引中
-	AddUser(user IUserEntity) error
-	//从索引中移除一个User
-	RemoveUser(userId string) (IUserEntity, error)
-	//从索引中更新一个User
-	UpdateUser(user IUserEntity) error
-}
-
-func NewIUserIndex() IUserIndex {
-	return &UserIndex{userIdMap: make(map[string]IUserEntity)}
+func NewIUserIndex() basis.IUserIndex {
+	return &UserIndex{userIdMap: make(map[string]basis.IUserEntity)}
 }
 
 func NewUserIndex() *UserIndex {
-	return &UserIndex{userIdMap: make(map[string]IUserEntity)}
+	return &UserIndex{userIdMap: make(map[string]basis.IUserEntity)}
 }
 
 type UserIndex struct {
-	userIdMap map[string]IUserEntity
+	userIdMap map[string]basis.IUserEntity
 	mu        sync.RWMutex
 }
 
@@ -44,13 +31,13 @@ func (i *UserIndex) CheckUser(userId string) bool {
 	return ok
 }
 
-func (i *UserIndex) GetUser(userId string) IUserEntity {
+func (i *UserIndex) GetUser(userId string) basis.IUserEntity {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	return i.userIdMap[userId]
 }
 
-func (i *UserIndex) AddUser(user IUserEntity) error {
+func (i *UserIndex) AddUser(user basis.IUserEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == user {
@@ -64,7 +51,7 @@ func (i *UserIndex) AddUser(user IUserEntity) error {
 	return nil
 }
 
-func (i *UserIndex) RemoveUser(userId string) (IUserEntity, error) {
+func (i *UserIndex) RemoveUser(userId string) (basis.IUserEntity, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	e, ok := i.userIdMap[userId]
@@ -75,7 +62,7 @@ func (i *UserIndex) RemoveUser(userId string) (IUserEntity, error) {
 	return nil, errors.New("UserIndex.RemoveUser Error: No User(" + userId + ")")
 }
 
-func (i *UserIndex) UpdateUser(user IUserEntity) error {
+func (i *UserIndex) UpdateUser(user basis.IUserEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == user {

@@ -3,37 +3,24 @@
 //on 2019-03-08.
 //@author xuzhuoxi
 //
-package mmo
+package index
 
 import (
 	"github.com/pkg/errors"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
-//队伍索引
-type ITeamIndex interface {
-	//检查Team是否存在
-	CheckTeam(teamId string) bool
-	//获取Team
-	GetTeam(teamId string) ITeamEntity
-	//添加一个新Team到索引中
-	AddTeam(team ITeamEntity) error
-	//从索引中移除一个Team
-	RemoveTeam(teamId string) (ITeamEntity, error)
-	//从索引中更新一个Team
-	UpdateTeam(team ITeamEntity) error
-}
-
-func NewITeamIndex() ITeamIndex {
-	return &TeamIndex{teamMap: make(map[string]ITeamEntity)}
+func NewITeamIndex() basis.ITeamIndex {
+	return &TeamIndex{teamMap: make(map[string]basis.ITeamEntity)}
 }
 
 func NewTeamIndex() TeamIndex {
-	return TeamIndex{teamMap: make(map[string]ITeamEntity)}
+	return TeamIndex{teamMap: make(map[string]basis.ITeamEntity)}
 }
 
 type TeamIndex struct {
-	teamMap map[string]ITeamEntity
+	teamMap map[string]basis.ITeamEntity
 	mu      sync.RWMutex
 }
 
@@ -44,13 +31,13 @@ func (i *TeamIndex) CheckTeam(teamId string) bool {
 	return ok
 }
 
-func (i *TeamIndex) GetTeam(teamId string) ITeamEntity {
+func (i *TeamIndex) GetTeam(teamId string) basis.ITeamEntity {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	return i.teamMap[teamId]
 }
 
-func (i *TeamIndex) AddTeam(team ITeamEntity) error {
+func (i *TeamIndex) AddTeam(team basis.ITeamEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == team {
@@ -64,7 +51,7 @@ func (i *TeamIndex) AddTeam(team ITeamEntity) error {
 	return nil
 }
 
-func (i *TeamIndex) RemoveTeam(teamId string) (ITeamEntity, error) {
+func (i *TeamIndex) RemoveTeam(teamId string) (basis.ITeamEntity, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	e, ok := i.teamMap[teamId]
@@ -75,7 +62,7 @@ func (i *TeamIndex) RemoveTeam(teamId string) (ITeamEntity, error) {
 	return nil, errors.New("TeamIndex.RemoveTeam Error: No Team(" + teamId + ")")
 }
 
-func (i *TeamIndex) UpdateTeam(team ITeamEntity) error {
+func (i *TeamIndex) UpdateTeam(team basis.ITeamEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == team {

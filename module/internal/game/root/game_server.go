@@ -53,7 +53,8 @@ func (s *GameServer) StartServer() {
 		}
 		server := netx.NewTCPServer(100)
 		server.SetLogger(s.SingleCase.Logger())
-		server.SetPackHandler(newPackHandler(s.SingleCase, *s.extensionCfg).onPack)
+
+		server.GetPackHandler().AppendPackHandler(newPackHandler(s.SingleCase, *s.extensionCfg).onPack)
 		s.Server = append(s.Server, server)
 		go server.StartServer(netx.SockParams{Network: conf.Network, LocalAddress: conf.Addr})
 	}
@@ -84,16 +85,16 @@ type packHandler struct {
 	decoder      encodingx.IDecodeHandler
 }
 
-func (h *packHandler) onPack(msgBytes []byte, info interface{}) {
+func (h *packHandler) onPack(msgBytes []byte, info interface{}) bool {
 	name, pid, uid, data := h.parsePackMessage(msgBytes)
 	extension := h.getProtocolExtension(name)
 	if nil == extension {
 		h.singleCase.Logger().Warnln(fmt.Sprintf("Undefined Extension(%s)! Sender(%s)", name, uid))
-		return
+		return false
 	}
 	if !extension.CheckProtocolId(pid) {
 		h.singleCase.Logger().Warnln(fmt.Sprintf("Undefined ProtoId(%s) Send to Extension(%s)! Sender(%s)", pid, name, uid))
-		return
+		return false
 	}
 	if _, ok := extension.(protox.IRequestExtension); ok {
 		if be, ok := extension.(protox.IBeforeRequestExtension); ok {
@@ -114,6 +115,7 @@ func (h *packHandler) onPack(msgBytes []byte, info interface{}) {
 			ae.AfterRequest(pid)
 		}
 	}
+	return true
 }
 
 func (h *packHandler) handleRequestStructValue(extension protox.IOnRequestExtension, pid string, uid string, data [][]byte) {

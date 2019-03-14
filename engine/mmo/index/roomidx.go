@@ -3,37 +3,24 @@
 //on 2019-03-09.
 //@author xuzhuoxi
 //
-package mmo
+package index
 
 import (
 	"errors"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
-//房间索引
-type IRoomIndex interface {
-	//检查Room是否存在
-	CheckRoom(roomId string) bool
-	//获取Room
-	GetRoom(roomId string) IRoomEntity
-	//添加一个新Room到索引中
-	AddRoom(room IRoomEntity) error
-	//从索引中移除一个Room
-	RemoveRoom(roomId string) (IRoomEntity, error)
-	//从索引中更新一个Room
-	UpdateRoom(room IRoomEntity) error
-}
-
-func NewIRoomIndex() IRoomIndex {
-	return &RoomIndex{roomMap: make(map[string]IRoomEntity)}
+func NewIRoomIndex() basis.IRoomIndex {
+	return &RoomIndex{roomMap: make(map[string]basis.IRoomEntity)}
 }
 
 func NewRoomIndex() RoomIndex {
-	return RoomIndex{roomMap: make(map[string]IRoomEntity)}
+	return RoomIndex{roomMap: make(map[string]basis.IRoomEntity)}
 }
 
 type RoomIndex struct {
-	roomMap map[string]IRoomEntity
+	roomMap map[string]basis.IRoomEntity
 	mu      sync.RWMutex
 }
 
@@ -44,13 +31,13 @@ func (i *RoomIndex) CheckRoom(roomId string) bool {
 	return ok
 }
 
-func (i *RoomIndex) GetRoom(roomId string) IRoomEntity {
+func (i *RoomIndex) GetRoom(roomId string) basis.IRoomEntity {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	return i.roomMap[roomId]
 }
 
-func (i *RoomIndex) AddRoom(room IRoomEntity) error {
+func (i *RoomIndex) AddRoom(room basis.IRoomEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == room {
@@ -64,7 +51,7 @@ func (i *RoomIndex) AddRoom(room IRoomEntity) error {
 	return nil
 }
 
-func (i *RoomIndex) RemoveRoom(roomId string) (IRoomEntity, error) {
+func (i *RoomIndex) RemoveRoom(roomId string) (basis.IRoomEntity, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	e, ok := i.roomMap[roomId]
@@ -75,7 +62,7 @@ func (i *RoomIndex) RemoveRoom(roomId string) (IRoomEntity, error) {
 	return nil, errors.New("RoomIndex.RemoveRoom Error: No Room(" + roomId + ")")
 }
 
-func (i *RoomIndex) UpdateRoom(room IRoomEntity) error {
+func (i *RoomIndex) UpdateRoom(room basis.IRoomEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == room {

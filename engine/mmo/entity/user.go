@@ -3,32 +3,12 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package mmo
+package entity
 
 import (
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
-
-//用户实体
-type IUserEntity interface {
-	IEntity
-	IInitEntity
-	IChannelSubscriber
-	IVariableSupport
-	//用户名
-	UserName() string
-
-	GetLocation() (zoneId string, roomId string)
-	SetZone(zoneId string, roomId string)
-	SetRoom(roomId string)
-
-	GetTeamInfo() (teamId string, corpsId string)
-	SetTeam(teamId string)
-	SetCorps(corpsId string)
-
-	GetPosition() XYZ
-	SetPosition(pos XYZ)
-}
 
 type UserEntity struct {
 	Uid  string //用户标识，唯一，内部使用
@@ -44,10 +24,10 @@ type UserEntity struct {
 	TeamId  string
 	teamMu  sync.RWMutex
 
-	Pos   XYZ
+	Pos   basis.XYZ
 	posMu sync.RWMutex
 
-	ChannelSubscriber
+	UserSubscriber
 	VariableSupport
 }
 
@@ -63,13 +43,16 @@ func (e *UserEntity) NickName() string {
 	return e.Nick
 }
 
-func (e *UserEntity) EntityType() EntityType {
-	return EntityUser
+func (e *UserEntity) EntityType() basis.EntityType {
+	return basis.EntityUser
 }
 
 func (e *UserEntity) InitEntity() {
-	e.ChannelSubscriber = *NewChannelSubscriber()
+	e.UserSubscriber = *NewUserSubscriber()
 	e.VariableSupport = *NewVariableSupport()
+}
+
+func (e *UserEntity) DestroyEntity() {
 }
 
 func (e *UserEntity) GetLocation() (zoneId string, roomId string) {
@@ -83,11 +66,11 @@ func (e *UserEntity) SetZone(zoneId string, roomId string) {
 	defer e.locMu.Unlock()
 	if zoneId != e.ZoneId {
 		e.ZoneId = zoneId
-		e.ChannelSubscriber.AddWhiteChannel(zoneId)
+		e.UserSubscriber.AddWhite(zoneId)
 	}
 	if roomId != e.RoomId {
 		e.RoomId = roomId
-		e.ChannelSubscriber.AddWhiteChannel(roomId)
+		e.UserSubscriber.AddWhite(roomId)
 	}
 }
 
@@ -98,7 +81,7 @@ func (e *UserEntity) SetRoom(roomId string) {
 		return
 	}
 	e.RoomId = roomId
-	e.ChannelSubscriber.AddWhiteChannel(roomId)
+	e.UserSubscriber.AddWhite(roomId)
 }
 
 //---------------------------------
@@ -141,13 +124,13 @@ func (e *UserEntity) SetTeam(teamId string) {
 
 //---------------------------------
 
-func (e *UserEntity) GetPosition() XYZ {
+func (e *UserEntity) GetPosition() basis.XYZ {
 	e.posMu.RLock()
 	defer e.posMu.RUnlock()
 	return e.Pos
 }
 
-func (e *UserEntity) SetPosition(pos XYZ) {
+func (e *UserEntity) SetPosition(pos basis.XYZ) {
 	e.posMu.Lock()
 	defer e.posMu.Unlock()
 	e.Pos = pos

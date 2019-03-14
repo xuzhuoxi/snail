@@ -3,36 +3,24 @@
 //on 2019-03-09.
 //@author xuzhuoxi
 //
-package mmo
+package index
 
 import (
 	"errors"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
-type ITeamCorpsIndex interface {
-	//检查Corps是否存在
-	CheckCorps(corpsId string) bool
-	//获取Corps
-	GetCorps(corpsId string) ITeamCorpsEntity
-	//添加一个新Corps到索引中
-	AddCorps(corps ITeamCorpsEntity) error
-	//从索引中移除一个Corps
-	RemoveCorps(corpsId string) (ITeamCorpsEntity, error)
-	//更新一个新Corps到索引中
-	UpdateCorps(corps ITeamCorpsEntity) error
-}
-
-func NewITeamCorpsIndex() ITeamCorpsIndex {
-	return &TeamCorpsIndex{corpsMap: make(map[string]ITeamCorpsEntity)}
+func NewITeamCorpsIndex() basis.ITeamCorpsIndex {
+	return &TeamCorpsIndex{corpsMap: make(map[string]basis.ITeamCorpsEntity)}
 }
 
 func NewTeamCorpsIndex() TeamCorpsIndex {
-	return TeamCorpsIndex{corpsMap: make(map[string]ITeamCorpsEntity)}
+	return TeamCorpsIndex{corpsMap: make(map[string]basis.ITeamCorpsEntity)}
 }
 
 type TeamCorpsIndex struct {
-	corpsMap map[string]ITeamCorpsEntity
+	corpsMap map[string]basis.ITeamCorpsEntity
 	mu       sync.RWMutex
 }
 
@@ -43,13 +31,13 @@ func (i *TeamCorpsIndex) CheckCorps(corpsId string) bool {
 	return ok
 }
 
-func (i *TeamCorpsIndex) GetCorps(corpsId string) ITeamCorpsEntity {
+func (i *TeamCorpsIndex) GetCorps(corpsId string) basis.ITeamCorpsEntity {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	return i.corpsMap[corpsId]
 }
 
-func (i *TeamCorpsIndex) AddCorps(corps ITeamCorpsEntity) error {
+func (i *TeamCorpsIndex) AddCorps(corps basis.ITeamCorpsEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == corps {
@@ -63,7 +51,7 @@ func (i *TeamCorpsIndex) AddCorps(corps ITeamCorpsEntity) error {
 	return nil
 }
 
-func (i *TeamCorpsIndex) RemoveCorps(corpsId string) (ITeamCorpsEntity, error) {
+func (i *TeamCorpsIndex) RemoveCorps(corpsId string) (basis.ITeamCorpsEntity, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	e, ok := i.corpsMap[corpsId]
@@ -74,7 +62,7 @@ func (i *TeamCorpsIndex) RemoveCorps(corpsId string) (ITeamCorpsEntity, error) {
 	return nil, errors.New("TeamCorpsIndex.RemoveCorps Error: No Corps(" + corpsId + ")")
 }
 
-func (i *TeamCorpsIndex) UpdateCorps(corps ITeamCorpsEntity) error {
+func (i *TeamCorpsIndex) UpdateCorps(corps basis.ITeamCorpsEntity) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if nil == corps {

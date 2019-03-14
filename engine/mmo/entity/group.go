@@ -3,87 +3,16 @@
 //on 2019-03-07.
 //@author xuzhuoxi
 //
-package mmo
+package entity
 
 import (
 	"errors"
 	"github.com/xuzhuoxi/infra-go/slicex"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
-type IZoneGroup interface {
-	//区域列表
-	ZoneList() []string
-	//检查区域存在性
-	ContainZone(zoneId string) bool
-	//添加区域
-	AddZone(zoneId string) error
-	//移除区域
-	RemoveZone(zoneId string) error
-}
-
-type ITeamGroup interface {
-	//队伍列表
-	TeamList() []string
-	//检查队伍存在性
-	ContainTeam(roomId string) bool
-	//添加房间
-	AddTeam(roomId string) error
-	//移除房间
-	RemoveTeam(roomId string) error
-}
-
-type IRoomGroup interface {
-	//房间列表
-	RoomList() []string
-	//检查房间存在性
-	ContainRoom(roomId string) bool
-	//添加房间
-	AddRoom(roomId string) error
-	//移除房间
-	RemoveRoom(roomId string) error
-}
-
-type IUserGroup interface {
-	//用户列表
-	UserList() []string
-	//检查用户
-	ContainUser(userId string) bool
-	//加入用户,进行唯一性检查
-	AcceptUser(userId string) error
-	//从组中移除用户
-	DropUser(userId string) error
-}
-
-//组
-type IEntityGroup interface {
-	//接纳实体的类型
-	EntityType() EntityType
-	//最大实例数
-	MaxLen() int
-	//实体数量
-	Len() int
-	//实体已满
-	IsFull() bool
-
-	//包含实体id
-	Entities() []string
-	//包含实体id
-	CopyEntities() []string
-	//检查实体是否属于当前组
-	ContainEntity(entityId string) bool
-
-	//加入实体到组,进行唯一性检查
-	Accept(entityId string) error
-	//加入实体到组,进行唯一性检查
-	AcceptMulti(entityId []string) (count int, err error)
-	//从组中移除实体
-	Drop(entityId string) error
-	//从组中移除实体
-	DropMulti(entityId []string) (count int, err error)
-}
-
-func NewIEntityGroup(entityType EntityType, userMap bool) IEntityGroup {
+func NewIEntityGroup(entityType basis.EntityType, userMap bool) basis.IEntityGroup {
 	if userMap {
 		return NewEntityMapGroup(entityType)
 	} else {
@@ -91,24 +20,24 @@ func NewIEntityGroup(entityType EntityType, userMap bool) IEntityGroup {
 	}
 }
 
-func NewEntityListGroup(entityType EntityType) *EntityListGroup {
+func NewEntityListGroup(entityType basis.EntityType) *EntityListGroup {
 	return &EntityListGroup{entityType: entityType}
 }
 
-func NewEntityMapGroup(entityType EntityType) *EntityMapGroup {
+func NewEntityMapGroup(entityType basis.EntityType) *EntityMapGroup {
 	return &EntityMapGroup{entityType: entityType}
 }
 
 //------------------------------
 
 type EntityMapGroup struct {
-	entityType EntityType
+	entityType basis.EntityType
 	entityMap  map[string]*struct{}
 	max        int
 	entityMu   sync.RWMutex
 }
 
-func (g *EntityMapGroup) EntityType() EntityType {
+func (g *EntityMapGroup) EntityType() basis.EntityType {
 	return g.entityType
 }
 
@@ -220,13 +149,13 @@ func (g *EntityMapGroup) isFull() bool {
 //---------------------------------------
 
 type EntityListGroup struct {
-	entityType EntityType
+	entityType basis.EntityType
 	entityList []string
 	max        int
 	entityMu   sync.RWMutex
 }
 
-func (g *EntityListGroup) EntityType() EntityType {
+func (g *EntityListGroup) EntityType() basis.EntityType {
 	return g.entityType
 }
 

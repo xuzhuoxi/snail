@@ -3,23 +3,15 @@
 //on 2019-03-03.
 //@author xuzhuoxi
 //
-package mmo
+package entity
 
-import "sync"
+import (
+	"github.com/xuzhuoxi/infra-go/eventx"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
+	"sync"
+)
 
-type VarSet map[string]interface{}
-
-//变量列表
-type IVariableSupport interface {
-	SetVar(key string, value interface{})
-	SetVarMap(kv map[string]interface{})
-	GetVar(key string) interface{}
-
-	CheckVar(key string) bool
-	RemoveVar(key string)
-}
-
-func NewIVariableSupport() IVariableSupport {
+func NewIVariableSupport() basis.IVariableSupport {
 	return &VariableSupport{set: make(map[string]interface{})}
 }
 
@@ -30,22 +22,31 @@ func NewVariableSupport() *VariableSupport {
 //---------------------------------------------
 
 type VariableSupport struct {
-	set VarSet
+	eventx.EventDispatcher
+	set basis.VarSet
 	mu  sync.RWMutex
+}
+
+func (s *VariableSupport) Vars() basis.VarSet {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.set
 }
 
 func (s *VariableSupport) SetVar(key string, value interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.set[key] = value
+	s.DispatchEvent(basis.EventSetVariable, []interface{}{key, value})
 }
 
-func (s *VariableSupport) SetVarMap(kv map[string]interface{}) {
+func (s *VariableSupport) SetVars(kv basis.VarSet) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for k, v := range kv {
 		s.set[k] = v
 	}
+	s.DispatchEvent(basis.EventSetMultiVariable, kv)
 }
 
 func (s *VariableSupport) GetVar(key string) interface{} {
