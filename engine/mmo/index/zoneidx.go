@@ -27,6 +27,10 @@ type ZoneIndex struct {
 func (i *ZoneIndex) CheckZone(zoneId string) bool {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
+	return i.checkZone(zoneId)
+}
+
+func (i *ZoneIndex) checkZone(zoneId string) bool {
 	_, ok := i.zoneMap[zoneId]
 	return ok
 }
@@ -44,7 +48,7 @@ func (i *ZoneIndex) AddZone(zone basis.IZoneEntity) error {
 		return errors.New("ZoneIndex.AddZone Error: zone is nil")
 	}
 	zoneId := zone.UID()
-	if i.CheckZone(zoneId) {
+	if i.checkZone(zoneId) {
 		return errors.New("ZoneIndex.AddZone Error: Zone(" + zoneId + ") Duplicate")
 	}
 	i.zoneMap[zoneId] = zone

@@ -44,7 +44,7 @@ func (e *ZoneEntity) InitEntity() {
 	e.EntityChildSupport = *NewEntityChildSupport()
 	e.ListEntityContainer = *NewListEntityContainer(0)
 	//e.RoomGroup = NewEntityListGroup(EntityRoom)
-	e.VariableSupport = *NewVariableSupport()
+	e.VariableSupport = *NewVariableSupport(e)
 }
 
 //func (e *ZoneEntity) RoomList() []string {

@@ -27,6 +27,10 @@ type TeamCorpsIndex struct {
 func (i *TeamCorpsIndex) CheckCorps(corpsId string) bool {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
+	return i.checkCorps(corpsId)
+}
+
+func (i *TeamCorpsIndex) checkCorps(corpsId string) bool {
 	_, ok := i.corpsMap[corpsId]
 	return ok
 }
@@ -44,7 +48,7 @@ func (i *TeamCorpsIndex) AddCorps(corps basis.ITeamCorpsEntity) error {
 		return errors.New("TeamCorpsIndex.AddCorps Error: corps is nil")
 	}
 	corpsId := corps.UID()
-	if i.CheckCorps(corpsId) {
+	if i.checkCorps(corpsId) {
 		return errors.New("TeamCorpsIndex.AddCorps Error: Corps(" + corpsId + ") Duplicate")
 	}
 	i.corpsMap[corpsId] = corps

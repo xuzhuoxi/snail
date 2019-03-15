@@ -27,6 +27,10 @@ type TeamIndex struct {
 func (i *TeamIndex) CheckTeam(teamId string) bool {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
+	return i.checkTeam(teamId)
+}
+
+func (i *TeamIndex) checkTeam(teamId string) bool {
 	_, ok := i.teamMap[teamId]
 	return ok
 }
@@ -44,7 +48,7 @@ func (i *TeamIndex) AddTeam(team basis.ITeamEntity) error {
 		return errors.New("TeamIndex.AddTeam Error: team is nil")
 	}
 	teamId := team.UID()
-	if i.CheckTeam(teamId) {
+	if i.checkTeam(teamId) {
 		return errors.New("TeamIndex.AddTeam Error: Team(" + teamId + ") Duplicate")
 	}
 	i.teamMap[teamId] = team

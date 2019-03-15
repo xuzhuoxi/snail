@@ -27,6 +27,10 @@ type RoomIndex struct {
 func (i *RoomIndex) CheckRoom(roomId string) bool {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
+	return i.checkRoom(roomId)
+}
+
+func (i *RoomIndex) checkRoom(roomId string) bool {
 	_, ok := i.roomMap[roomId]
 	return ok
 }
@@ -44,7 +48,7 @@ func (i *RoomIndex) AddRoom(room basis.IRoomEntity) error {
 		return errors.New("RoomIndex.AddRoom Error: room is nil")
 	}
 	roomId := room.UID()
-	if i.CheckRoom(roomId) {
+	if i.checkRoom(roomId) {
 		return errors.New("RoomIndex.AddRoom Error: Room(" + roomId + ") Duplicate")
 	}
 	i.roomMap[roomId] = room

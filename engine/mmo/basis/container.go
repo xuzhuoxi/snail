@@ -17,6 +17,6 @@ type IEntityContainer interface {
 	RemoveChild(entity IEntity) error
 	RemoveChildById(entityId string) (entity IEntity, ok bool)
 
-	ForEachChildren(each func(child IEntity) (interruptCurrent bool, interruptRecurse bool))
-	ForEachChildrenByType(entityType EntityType, each func(child IEntity), recurse bool)
+	ForEachChild(each func(child IEntity) (interruptCurrent bool, interruptRecurse bool))
+	ForEachChildByType(entityType EntityType, each func(child IEntity), recurse bool)
 }

@@ -14,12 +14,16 @@ const (
 
 type VarSet map[string]interface{}
 
+func NewVarSet() VarSet {
+	return make(map[string]interface{})
+}
+
 //变量列表
 type IVariableSupport interface {
 	eventx.IEventDispatcher
 	SetVar(key string, value interface{})
 	SetVars(kv VarSet)
-	GetVar(key string) interface{}
+	GetVar(key string) (interface{}, bool)
 	Vars() VarSet
 
 	CheckVar(key string) bool

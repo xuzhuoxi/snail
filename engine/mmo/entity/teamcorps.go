@@ -40,7 +40,7 @@ func (e *TeamCorpsEntity) EntityType() basis.EntityType {
 func (e *TeamCorpsEntity) InitEntity() {
 	e.ListEntityContainer = *NewListEntityContainer(0)
 	//e.TeamGroup = NewEntityListGroup(EntityTeam)
-	e.VariableSupport = *NewVariableSupport()
+	e.VariableSupport = *NewVariableSupport(e)
 }
 
 //func (e *TeamCorpsEntity) TeamList() []string {

@@ -27,6 +27,10 @@ type ChannelIndex struct {
 func (i *ChannelIndex) CheckChannel(chanId string) bool {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
+	return i.checkChannel(chanId)
+}
+
+func (i *ChannelIndex) checkChannel(chanId string) bool {
 	_, ok := i.chanMap[chanId]
 	return ok
 }
@@ -44,7 +48,7 @@ func (i *ChannelIndex) AddChannel(channel basis.IChannelEntity) error {
 		return errors.New("ChannelIndex.AddChannel Error: channel is nil")
 	}
 	chanId := channel.UID()
-	if i.CheckChannel(chanId) {
+	if i.checkChannel(chanId) {
 		return errors.New("ChannelIndex.AddChannel Error: Channel(" + chanId + ") Duplicate")
 	}
 	i.chanMap[chanId] = channel

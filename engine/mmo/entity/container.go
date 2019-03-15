@@ -125,7 +125,7 @@ func (c *MapEntityContainer) RemoveChildById(entityId string) (entity basis.IEnt
 	return
 }
 
-func (c *MapEntityContainer) ForEachChildren(each func(child basis.IEntity) (interruptCurrent bool, interruptRecurse bool)) {
+func (c *MapEntityContainer) ForEachChild(each func(child basis.IEntity) (interruptCurrent bool, interruptRecurse bool)) {
 	c.containerMu.RLock()
 	defer c.containerMu.RUnlock()
 	if 0 == len(c.entities) {
@@ -141,12 +141,12 @@ func (c *MapEntityContainer) ForEachChildren(each func(child basis.IEntity) (int
 			continue
 		}
 		if container, ok := entity.(basis.IEntityContainer); ok {
-			container.ForEachChildren(each)
+			container.ForEachChild(each)
 		}
 	}
 }
 
-func (c *MapEntityContainer) ForEachChildrenByType(entityType basis.EntityType, each func(child basis.IEntity), recurse bool) {
+func (c *MapEntityContainer) ForEachChildByType(entityType basis.EntityType, each func(child basis.IEntity), recurse bool) {
 	c.containerMu.RLock()
 	defer c.containerMu.RUnlock()
 	if 0 == len(c.entities) {
@@ -160,7 +160,7 @@ func (c *MapEntityContainer) ForEachChildrenByType(entityType basis.EntityType, 
 			child := entity
 			each(child)
 			if container, ok := entity.(basis.IEntityContainer); ok {
-				container.ForEachChildrenByType(entityType, each, true)
+				container.ForEachChildByType(entityType, each, true)
 			}
 		}
 	} else {
@@ -286,7 +286,7 @@ func (c *ListEntityContainer) RemoveChildById(entityId string) (entity basis.IEn
 	return
 }
 
-func (c *ListEntityContainer) ForEachChildren(each func(child basis.IEntity) (interruptCurrent bool, interruptRecurse bool)) {
+func (c *ListEntityContainer) ForEachChild(each func(child basis.IEntity) (interruptCurrent bool, interruptRecurse bool)) {
 	c.containerMu.RLock()
 	defer c.containerMu.RUnlock()
 	if 0 == len(c.entities) {
@@ -302,12 +302,12 @@ func (c *ListEntityContainer) ForEachChildren(each func(child basis.IEntity) (in
 			continue
 		}
 		if container, ok := entity.(basis.IEntityContainer); ok {
-			container.ForEachChildren(each)
+			container.ForEachChild(each)
 		}
 	}
 }
 
-func (c *ListEntityContainer) ForEachChildrenByType(entityType basis.EntityType, each func(child basis.IEntity), recurse bool) {
+func (c *ListEntityContainer) ForEachChildByType(entityType basis.EntityType, each func(child basis.IEntity), recurse bool) {
 	c.containerMu.RLock()
 	defer c.containerMu.RUnlock()
 	if 0 == len(c.entities) {
@@ -321,7 +321,7 @@ func (c *ListEntityContainer) ForEachChildrenByType(entityType basis.EntityType,
 			child := entity
 			each(child)
 			if container, ok := entity.(basis.IEntityContainer); ok {
-				container.ForEachChildrenByType(entityType, each, true)
+				container.ForEachChildByType(entityType, each, true)
 			}
 		}
 	} else {

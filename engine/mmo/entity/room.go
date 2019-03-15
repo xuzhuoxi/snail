@@ -67,7 +67,7 @@ func (e *RoomEntity) InitEntity() {
 	e.EntityChildSupport = *NewEntityChildSupport()
 	e.ListEntityContainer = *NewListEntityContainer(e.MaxMember)
 	//e.UserGroup = NewEntityListGroup(EntityUser)
-	e.VariableSupport = *NewVariableSupport()
+	e.VariableSupport = *NewVariableSupport(e)
 }
 
 //func (e *RoomEntity) UserList() []string {

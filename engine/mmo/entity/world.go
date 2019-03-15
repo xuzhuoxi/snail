@@ -35,7 +35,7 @@ func (w *WorldEntity) EntityType() basis.EntityType {
 func (w *WorldEntity) InitEntity() {
 	w.ListEntityContainer = *NewListEntityContainer(0)
 	//w.ZoneGroup = NewEntityListGroup(EntityZone)
-	w.VariableSupport = *NewVariableSupport()
+	w.VariableSupport = *NewVariableSupport(w)
 }
 
 //func (w *WorldEntity) ZoneList() []string {

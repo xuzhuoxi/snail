@@ -10,6 +10,14 @@ import (
 	"sync"
 )
 
+func NewIUserEntity(userId string, userName string) basis.IUserEntity {
+	return NewIUserEntity(userId, userName)
+}
+
+func NewUserEntity(userId string, userName string) *UserEntity {
+	return &UserEntity{Uid: userId, Nick: userName}
+}
+
 type UserEntity struct {
 	Uid  string //用户标识，唯一，内部使用
 	Name string //用户名，唯一
@@ -49,7 +57,7 @@ func (e *UserEntity) EntityType() basis.EntityType {
 
 func (e *UserEntity) InitEntity() {
 	e.UserSubscriber = *NewUserSubscriber()
-	e.VariableSupport = *NewVariableSupport()
+	e.VariableSupport = *NewVariableSupport(e)
 }
 
 func (e *UserEntity) DestroyEntity() {

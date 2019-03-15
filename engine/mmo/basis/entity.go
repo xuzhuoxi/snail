@@ -8,8 +8,7 @@ package basis
 type EntityType int
 
 const (
-	EntityNone EntityType = iota
-	EntityWorld
+	EntityWorld EntityType = iota + 1
 	EntityZone
 	EntityRoom
 	EntityUser

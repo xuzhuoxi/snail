@@ -27,6 +27,10 @@ type UserIndex struct {
 func (i *UserIndex) CheckUser(userId string) bool {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
+	return i.checkUser(userId)
+}
+
+func (i *UserIndex) checkUser(userId string) bool {
 	_, ok := i.userIdMap[userId]
 	return ok
 }
@@ -44,7 +48,7 @@ func (i *UserIndex) AddUser(user basis.IUserEntity) error {
 		return errors.New("UserIndex.AddUser Error: user is nil")
 	}
 	userId := user.UID()
-	if i.CheckUser(userId) {
+	if i.checkUser(userId) {
 		return errors.New("UserIndex.AddUser Error: UserId(" + userId + ") Duplicate")
 	}
 	i.userIdMap[userId] = user
