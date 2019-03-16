@@ -6,8 +6,6 @@
 package mmo
 
 import (
-	"github.com/pkg/errors"
-	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
@@ -15,10 +13,9 @@ import (
 )
 
 type IMMOManager interface {
-	InitMMO() error
+	basis.IManagerBase
 	netx.ISockServerSetter
 	netx.IAddressProxySetter
-	logx.ILoggerSetter
 
 	GetEntityManager() manager.IEntityManager
 	GetUserManager() manager.IUserManager
@@ -39,19 +36,32 @@ type MMOManager struct {
 	entityMgr manager.IEntityManager
 	userMgr   manager.IUserManager
 	bcMgr     manager.IBroadcastManager
+	varMgr    manager.IVariableManager
 	logger    logx.ILogger
 }
 
-func (m *MMOManager) InitMMO() error {
+func (m *MMOManager) InitManager() {
 	if nil != m.entityMgr {
-		return errors.New("Manager is already init. ")
+		return
 	}
 	m.entityMgr = manager.NewIEntityManager()
-	m.entityMgr.AddEventListener(basis.EventSetVariable, m.onEntityVar)
-	m.entityMgr.AddEventListener(basis.EventSetMultiVariable, m.onEntityVar)
+	m.entityMgr.InitManager()
 	m.userMgr = manager.NewIUserManager(m.entityMgr)
+	m.userMgr.InitManager()
 	m.bcMgr = manager.NewIBroadcastManager(m.entityMgr, nil, nil)
-	return nil
+	m.bcMgr.InitManager()
+	m.varMgr = manager.NewIVariableManager(m.entityMgr, m.bcMgr)
+	m.varMgr.InitManager()
+	if nil != m.logger {
+		m.SetLogger(m.logger)
+	}
+}
+
+func (m *MMOManager) DisposeManager() {
+	m.varMgr.DisposeManager()
+	m.bcMgr.DisposeManager()
+	m.userMgr.DisposeManager()
+	m.entityMgr.DisposeManager()
 }
 
 func (m *MMOManager) SetServer(server netx.ISockServer) {
@@ -68,6 +78,18 @@ func (m *MMOManager) SetAddressProxy(proxy netx.IAddressProxy) {
 
 func (m *MMOManager) SetLogger(logger logx.ILogger) {
 	m.logger = logger
+	if nil != m.entityMgr {
+		m.entityMgr.SetLogger(logger)
+	}
+	if nil != m.userMgr {
+		m.userMgr.SetLogger(logger)
+	}
+	if nil != m.bcMgr {
+		m.bcMgr.SetLogger(logger)
+	}
+	if nil != m.varMgr {
+		m.varMgr.SetLogger(logger)
+	}
 }
 
 func (m *MMOManager) GetEntityManager() manager.IEntityManager {
@@ -80,12 +102,4 @@ func (m *MMOManager) GetUserManager() manager.IUserManager {
 
 func (m *MMOManager) GetBroadcastManager() manager.IBroadcastManager {
 	return m.bcMgr
-}
-
-//------------------------------
-
-func (m *MMOManager) onEntityVar(evd *eventx.EventData) {
-	varSet := evd.Data.(basis.VarSet)
-	target := varSet["Target"]
-	m.logger.Traceln("onEntityVar", target)
 }

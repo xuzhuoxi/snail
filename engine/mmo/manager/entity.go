@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/xuzhuoxi/infra-go/eventx"
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"github.com/xuzhuoxi/snail/engine/mmo/entity"
 	"github.com/xuzhuoxi/snail/engine/mmo/index"
@@ -56,11 +57,12 @@ type IEntityGetter interface {
 }
 
 type IEntityManager interface {
-	World() basis.IWorldEntity
+	eventx.IEventDispatcher
 	IEntityCreator
 	IEntityGetter
 	IEntityIndexSet
-	eventx.IEventDispatcher
+	basis.IManagerBase
+	World() basis.IWorldEntity
 }
 
 func NewIEntityManager() IEntityManager {
@@ -88,7 +90,20 @@ type EntityManager struct {
 	chanIndexMu      sync.RWMutex
 
 	rootWorld basis.IWorldEntity
+	logger    logx.ILogger
 	eventx.EventDispatcher
+}
+
+func (m *EntityManager) InitManager() {
+	return
+}
+
+func (m *EntityManager) DisposeManager() {
+	return
+}
+
+func (m *EntityManager) SetLogger(logger logx.ILogger) {
+	m.logger = logger
 }
 
 func (m *EntityManager) InitWorld(worldId string, worldName string) (basis.IWorldEntity, error) {
@@ -188,24 +203,20 @@ func (m *EntityManager) CreateChannel(chanId string, chanName string) (basis.ICh
 
 func (m *EntityManager) addEntityEventListener(entity basis.IEntity) {
 	if dispatcher, ok := entity.(basis.IVariableSupport); ok {
-		dispatcher.AddEventListener(basis.EventSetVariable, m.onEntityVar)
-		dispatcher.AddEventListener(basis.EventSetMultiVariable, m.onEntityVar)
+		dispatcher.AddEventListener(basis.EventVariableChanged, m.onEntityVar)
 	}
 }
 
 func (m *EntityManager) removeEntityEventListener(entity basis.IEntity) {
 	if dispatcher, ok := entity.(basis.IVariableSupport); ok {
-		dispatcher.RemoveEventListener(basis.EventSetMultiVariable, m.onEntityVar)
-		dispatcher.RemoveEventListener(basis.EventSetVariable, m.onEntityVar)
+		dispatcher.RemoveEventListener(basis.EventVariableChanged, m.onEntityVar)
 	}
 }
 
 //事件转发
 func (m *EntityManager) onEntityVar(evd *eventx.EventData) {
 	evd.StopImmediatePropagation()
-	varSet := evd.Data.(basis.VarSet)
-	varSet["Target"] = evd.CurrentTarget()
-	m.DispatchEvent(evd.EventType, m, varSet)
+	m.DispatchEvent(evd.EventType, m, []interface{}{evd.CurrentTarget(), evd.Data})
 }
 
 //----------------------------

@@ -7,7 +7,6 @@ package entity
 
 import (
 	"github.com/xuzhuoxi/infra-go/eventx"
-	"github.com/xuzhuoxi/infra-go/lang"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
@@ -38,33 +37,18 @@ func (s *VariableSupport) Vars() basis.VarSet {
 func (s *VariableSupport) SetVar(key string, value interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if val, ok := s.vars[key]; ok && lang.Equal(val, value) {
-		return
+	diff := s.vars.Set(key, value)
+	if nil != diff {
+		s.DispatchEvent(basis.EventVariableChanged, s.currentTarget, diff)
 	}
-	s.vars[key] = value
-	kv := basis.NewVarSet()
-	kv[key] = value
-	s.DispatchEvent(basis.EventSetVariable, s.currentTarget, kv)
 }
 
 func (s *VariableSupport) SetVars(kv basis.VarSet) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var rm []string
-	for k, v := range kv {
-		if val, ok := s.vars[k]; ok && lang.Equal(val, v) {
-			rm = append(rm, k)
-			continue
-		}
-		s.vars[k] = v
-	}
-	if len(rm) > 0 { //去重
-		for _, k := range rm {
-			delete(kv, k)
-		}
-	}
-	if len(kv) > 0 {
-		s.DispatchEvent(basis.EventSetMultiVariable, s.currentTarget, kv)
+	diff := s.vars.Merge(kv)
+	if nil != diff {
+		s.DispatchEvent(basis.EventVariableChanged, s.currentTarget, diff)
 	}
 }
 

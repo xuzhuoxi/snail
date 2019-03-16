@@ -8,26 +8,22 @@ package manager
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
 type IBroadcastManager interface {
+	basis.IManagerBase
 	netx.ISockServerSetter
 	netx.IAddressProxySetter
 
-	//环境实体变量更新(单一)
-	NotifyEnvVar(varTarget basis.IEntity, key string, val interface{})
-	//环境实体变量更新(多个)
+	//环境实体变量更新
 	NotifyEnvVars(varTarget basis.IEntity, vars basis.VarSet)
-	//用户实体变量更新(单一)
-	NotifyUserVar(source basis.IUserEntity, key string, val interface{})
-	//用户实体变量更新(多个)
+	//用户实体变量更新
 	NotifyUserVars(source basis.IUserEntity, vars basis.VarSet)
-	//用户实体变量更新(单一)
-	NotifyUserVarCurrent(source basis.IUserEntity, key string, val interface{})
-	//用户实体变量更新(多个)
+	//用户实体变量更新
 	NotifyUserVarsCurrent(source basis.IUserEntity, vars basis.VarSet)
 
 	//广播整个实体
@@ -58,7 +54,20 @@ type BroadcastManager struct {
 	entityMgr    IEntityManager
 	sockServer   netx.ISockServer
 	addressProxy netx.IAddressProxy
+	logger       logx.ILogger
 	broadcastMu  sync.RWMutex
+}
+
+func (m *BroadcastManager) InitManager() {
+	return
+}
+
+func (m *BroadcastManager) DisposeManager() {
+	return
+}
+
+func (m *BroadcastManager) SetLogger(logger logx.ILogger) {
+	m.logger = logger
 }
 
 func (m *BroadcastManager) SetServer(server netx.ISockServer) {
@@ -73,28 +82,13 @@ func (m *BroadcastManager) SetAddressProxy(addressProxy netx.IAddressProxy) {
 	m.addressProxy = addressProxy
 }
 
-func (m *BroadcastManager) NotifyEnvVar(varTarget basis.IEntity, key string, val interface{}) {
-	panic("implement me")
-}
-
 func (m *BroadcastManager) NotifyEnvVars(varTarget basis.IEntity, vars basis.VarSet) {
-	panic("implement me")
-}
-
-func (m *BroadcastManager) NotifyUserVar(source basis.IUserEntity, key string, val interface{}) {
-	panic("implement me")
 }
 
 func (m *BroadcastManager) NotifyUserVars(source basis.IUserEntity, vars basis.VarSet) {
-	panic("implement me")
-}
-
-func (m *BroadcastManager) NotifyUserVarCurrent(source basis.IUserEntity, key string, val interface{}) {
-	panic("implement me")
 }
 
 func (m *BroadcastManager) NotifyUserVarsCurrent(source basis.IUserEntity, vars basis.VarSet) {
-	panic("implement me")
 }
 
 func (m *BroadcastManager) Broadcast(source basis.IEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error {

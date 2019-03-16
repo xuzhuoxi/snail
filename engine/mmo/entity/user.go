@@ -11,7 +11,7 @@ import (
 )
 
 func NewIUserEntity(userId string, userName string) basis.IUserEntity {
-	return NewIUserEntity(userId, userName)
+	return NewUserEntity(userId, userName)
 }
 
 func NewUserEntity(userId string, userName string) *UserEntity {
@@ -22,7 +22,7 @@ type UserEntity struct {
 	Uid  string //用户标识，唯一，内部使用
 	Name string //用户名，唯一
 	Nick string //用户昵称
-	Addr string //用户连接地址
+	Addr string //用户历史或当前连接地址
 
 	ZoneId string
 	RoomId string

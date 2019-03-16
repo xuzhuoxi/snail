@@ -8,11 +8,13 @@ package manager
 import (
 	"errors"
 	"fmt"
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
 )
 
 type IUserManager interface {
+	basis.IManagerBase
 	//加入世界
 	EnterWorld(user basis.IUserEntity, roomId string) error
 	//离开世界
@@ -33,7 +35,20 @@ func NewUserManager(entityMgr IEntityManager) *UserManager {
 
 type UserManager struct {
 	entityMgr  IEntityManager
+	logger     logx.ILogger
 	transferMu sync.RWMutex
+}
+
+func (w *UserManager) InitManager() {
+	return
+}
+
+func (w *UserManager) DisposeManager() {
+	return
+}
+
+func (m *UserManager) SetLogger(logger logx.ILogger) {
+	m.logger = logger
 }
 
 func (w *UserManager) EnterWorld(user basis.IUserEntity, roomId string) error {
