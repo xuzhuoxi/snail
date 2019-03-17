@@ -11,6 +11,7 @@ import (
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
+	"math"
 	"sync"
 )
 
@@ -19,25 +20,29 @@ type IBroadcastManager interface {
 	netx.ISockServerSetter
 	netx.IAddressProxySetter
 
+	//以下为基础方法------
+
+	//广播整个实体
+	//target为环境实体
+	//source可以为nil，当不为nil时会进行黑名单过滤，和本身过滤
+	BroadcastEntity(source basis.IUserEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error
+	//广播部分用户
+	//targets为用户实体IUserEntity的UID集合
+	//source可以为nil，当不为nil时会进行黑名单过滤，和本身过滤
+	BroadcastUsers(source basis.IUserEntity, targets []string, handler func(entity basis.IUserEntity)) error
+	//设置附近值
+	SetNearDistance(distance float64)
+	//广播当前用户所在区域
+	//source不能为nil
+	BroadcastCurrent(source basis.IUserEntity, excludeBlack bool, handler func(entity basis.IUserEntity)) error
+	//以下为业务型方法------
+
 	//环境实体变量更新
 	NotifyEnvVars(varTarget basis.IEntity, vars basis.VarSet)
 	//用户实体变量更新
 	NotifyUserVars(source basis.IUserEntity, vars basis.VarSet)
 	//用户实体变量更新
 	NotifyUserVarsCurrent(source basis.IUserEntity, vars basis.VarSet)
-
-	//广播整个实体
-	Broadcast(source basis.IEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error
-	//广播整个实体，过滤掉黑名单部分
-	BroadcastWithoutBlack(source basis.IEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error
-	//广播部分用户
-	BroadcastUsers(source basis.IEntity, targets []string, handler func(entity basis.IUserEntity)) error
-	//广播部分用户
-	BroadcastUsersWithoutBlack(source basis.IEntity, targets []string, handler func(entity basis.IUserEntity)) error
-	//广播当前用户
-	BroadcastCurrent(source basis.IEntity, handler func(entity basis.IUserEntity)) error
-	//广播当前用户
-	BroadcastCurrentWithoutBlack(source basis.IEntity, handler func(entity basis.IUserEntity)) error
 }
 
 func NewIBroadcastManager(entityMgr IEntityManager, sockServer netx.ISockServer, addressProxy netx.IAddressProxy) IBroadcastManager {
@@ -45,7 +50,7 @@ func NewIBroadcastManager(entityMgr IEntityManager, sockServer netx.ISockServer,
 }
 
 func NewBroadcastManager(entityMgr IEntityManager, sockServer netx.ISockServer, addressProxy netx.IAddressProxy) *BroadcastManager {
-	return &BroadcastManager{entityMgr: entityMgr, sockServer: sockServer, addressProxy: addressProxy}
+	return &BroadcastManager{entityMgr: entityMgr, sockServer: sockServer, addressProxy: addressProxy, logger: logx.DefaultLogger(), distance: math.MaxFloat64}
 }
 
 //----------------------------------
@@ -56,6 +61,7 @@ type BroadcastManager struct {
 	addressProxy netx.IAddressProxy
 	logger       logx.ILogger
 	broadcastMu  sync.RWMutex
+	distance     float64
 }
 
 func (m *BroadcastManager) InitManager() {
@@ -82,6 +88,99 @@ func (m *BroadcastManager) SetAddressProxy(addressProxy netx.IAddressProxy) {
 	m.addressProxy = addressProxy
 }
 
+func (m *BroadcastManager) BroadcastEntity(source basis.IUserEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error {
+	m.broadcastMu.RLock()
+	defer m.broadcastMu.RUnlock()
+	if nil == target {
+		return errors.New(fmt.Sprintf("Target is nil. "))
+	}
+	if userTarget, ok := target.(basis.IUserEntity); ok {
+		if nil != source && (checkSame(source, userTarget) || checkBlack(source, userTarget)) { //本身 或 黑名单
+			return nil
+		}
+		handler(userTarget)
+		return nil
+	}
+	if entityContainer, ok := target.(basis.IEntityContainer); ok { //容器判断
+		if nil == source {
+			entityContainer.ForEachChildByType(basis.EntityUser, func(child basis.IEntity) {
+				handler(child.(basis.IUserEntity))
+			}, true)
+		} else {
+			entityContainer.ForEachChild(func(child basis.IEntity) (interruptCurrent bool, interruptRecurse bool) {
+				if basis.EntityUser != child.EntityType() || checkSame(source, child) { //不是用户实体 或 是自己本身
+					return
+				}
+				if checkBlack(source, child) { //黑名单
+					return false, true
+				}
+				handler(child.(basis.IUserEntity))
+				return
+			})
+		}
+	}
+	return nil
+}
+
+func (m *BroadcastManager) BroadcastUsers(source basis.IUserEntity, targets []string, handler func(entity basis.IUserEntity)) error {
+	m.broadcastMu.RLock()
+	defer m.broadcastMu.RUnlock()
+	if len(targets) == 0 {
+		return errors.New("Targets's len is 0")
+	}
+	userIndex := m.entityMgr.UserIndex()
+	for _, targetId := range targets {
+		if targetUser := userIndex.GetUser(targetId); nil != targetUser { //目标用户存在
+			if nil != source {
+				if checkSame(source, targetUser) { //本身
+					continue
+				}
+				if checkBlack(source, targetUser) { //黑名单
+					continue
+				}
+			}
+			handler(targetUser)
+		}
+	}
+	return nil
+}
+
+func (m *BroadcastManager) SetNearDistance(distance float64) {
+	m.broadcastMu.Lock()
+	defer m.broadcastMu.Unlock()
+	m.distance = distance
+}
+
+func (m *BroadcastManager) BroadcastCurrent(source basis.IUserEntity, excludeBlack bool, handler func(entity basis.IUserEntity)) error {
+	m.broadcastMu.RLock()
+	defer m.broadcastMu.RUnlock()
+	if nil == source {
+		return errors.New(fmt.Sprintf("Source is nil. "))
+	}
+	idType, id := source.GetLocation()
+	if parentEntity, ok := m.entityMgr.GetEntity(idType, id); ok {
+		if ec, ok2 := parentEntity.(basis.IEntityContainer); ok2 {
+			ec.ForEachChildByType(basis.EntityUser, func(child basis.IEntity) {
+				if checkSame(source, child) { //本身
+					return
+				}
+				if userChild, ok := child.(basis.IUserEntity); ok {
+					if excludeBlack && checkBlack(source, userChild) { //黑名单
+						return
+					}
+					if !basis.NearXYZ(source.GetPosition(), userChild.GetPosition(), m.distance) { //位置不相近
+						return
+					}
+					handler(userChild)
+				}
+			}, false)
+		}
+	}
+	return nil
+}
+
+//-----------------------------
+
 func (m *BroadcastManager) NotifyEnvVars(varTarget basis.IEntity, vars basis.VarSet) {
 }
 
@@ -91,143 +190,18 @@ func (m *BroadcastManager) NotifyUserVars(source basis.IUserEntity, vars basis.V
 func (m *BroadcastManager) NotifyUserVarsCurrent(source basis.IUserEntity, vars basis.VarSet) {
 }
 
-func (m *BroadcastManager) Broadcast(source basis.IEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error {
-	m.broadcastMu.Lock()
-	defer m.broadcastMu.Unlock()
-	Broadcast(source, target, handler)
-	return nil
-}
-
-func (m *BroadcastManager) BroadcastWithoutBlack(source basis.IEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error {
-	m.broadcastMu.Lock()
-	defer m.broadcastMu.Unlock()
-	BroadcastWithoutBlack(source, target, handler)
-	return nil
-}
-
-func (m *BroadcastManager) BroadcastUsers(source basis.IEntity, targets []string, handler func(entity basis.IUserEntity)) error {
-	m.broadcastMu.Lock()
-	defer m.broadcastMu.Unlock()
-	if err := m.checkUserBroadcast(source, targets); nil != err {
-		return err
-	}
-	userIndex := m.entityMgr.UserIndex()
-	for _, targetId := range targets {
-		if targetEntity := userIndex.GetUser(targetId); targetEntity != nil {
-			handler(targetEntity)
-		}
-	}
-	return nil
-}
-
-func (m *BroadcastManager) BroadcastUsersWithoutBlack(source basis.IEntity, targets []string, handler func(entity basis.IUserEntity)) error {
-	m.broadcastMu.Lock()
-	defer m.broadcastMu.Unlock()
-	if err := m.checkUserBroadcast(source, targets); nil != err {
-		return err
-	}
-	userIndex := m.entityMgr.UserIndex()
-	userSource, userSourceOk := source.(basis.IUserEntity)
-	for _, targetId := range targets {
-		if targetEntity := userIndex.GetUser(targetId); targetEntity != nil {
-			if userSourceOk && userSource.OnBlack(targetEntity.UID()) { //source黑名单
-				continue
-			}
-			if targetEntity.OnBlack(source.UID()) { //target黑名单
-				continue
-			}
-			handler(targetEntity)
-		}
-	}
-	return nil
-}
-
-func (m *BroadcastManager) checkUserBroadcast(source basis.IEntity, targets []string) error {
-	if nil == source {
-		return errors.New(fmt.Sprintf("Source is nil. "))
-	}
-	if len(targets) == 0 {
-		return errors.New(fmt.Sprintf("Target is empty. "))
-	}
-	return nil
-}
-
-func (m *BroadcastManager) BroadcastCurrent(source basis.IEntity, handler func(entity basis.IUserEntity)) error {
-	if nil == source {
-		return errors.New(fmt.Sprintf("Source is nil. "))
-	}
-	panic("implement me")
-}
-
-func (m *BroadcastManager) BroadcastCurrentWithoutBlack(source basis.IEntity, handler func(entity basis.IUserEntity)) error {
-	panic("implement me")
-}
-
 //-----------------------------
 
-func Broadcast(source basis.IEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error {
-	if err := checkSourceTarget(source, target); nil != err {
-		return err
-	}
-	sourceId := source.UID()
-	if userTarget, ok := target.(basis.IUserEntity); ok {
-		handler(userTarget)
-		return nil
-	} else if entityContainer, ok := target.(basis.IEntityContainer); ok {
-		var userEntity basis.IUserEntity
-		entityContainer.ForEachChildByType(basis.EntityUser, func(child basis.IEntity) {
-			if sourceId != child.UID() { //过滤自己
-				userEntity = child.(basis.IUserEntity)
-				handler(userEntity)
-			}
-		}, true)
-	}
-	return nil
+func checkSame(source basis.IUserEntity, target basis.IEntity) bool {
+	return source.UID() == target.UID()
 }
 
-func BroadcastWithoutBlack(source basis.IEntity, target basis.IEntity, handler func(entity basis.IUserEntity)) error {
-	if err := checkSourceTarget(source, target); nil != err {
-		return err
+func checkBlack(source basis.IUserEntity, target basis.IEntity) bool {
+	if source.OnBlack(target.UID()) { //source黑名单
+		return true
 	}
-	sourceId := source.UID()
-	userSource, sourceOk := source.(basis.IUserEntity)
-	userTarget, targetOk := target.(basis.IUserEntity)
-	if targetOk {
-		if userTarget.OnBlack(sourceId) {
-			return nil
-		}
-		if sourceOk && userSource.OnBlack(target.UID()) {
-			return nil
-		}
-		handler(userTarget)
-	} else if entityContainer, ok := target.(basis.IEntityContainer); ok {
-		var userEntity basis.IUserEntity
-		entityContainer.ForEachChild(func(child basis.IEntity) (interruptCurrent bool, interruptRecurse bool) {
-			if sourceId == child.UID() { //过滤自己
-				return
-			}
-			if sourceOk && userSource.OnBlack(child.UID()) { //source黑名单
-				return false, true
-			}
-			if basis.EntityUser == child.EntityType() && sourceId != child.UID() { //是用户实体
-				userEntity = child.(basis.IUserEntity)
-				if userEntity.OnBlack(sourceId) { //target黑名单
-					return
-				}
-				handler(userEntity)
-			}
-			return
-		})
+	if userTarget, ok := target.(basis.IUserEntity); ok { //target黑名单
+		return userTarget.OnBlack(source.UID())
 	}
-	return nil
-}
-
-func checkSourceTarget(source basis.IEntity, target basis.IEntity) error {
-	if nil == source || nil == target {
-		return errors.New("Source or target is nil. ")
-	}
-	if source == target || source.UID() == target.UID() {
-		return errors.New("Source is the same as the target. ")
-	}
-	return nil
+	return false
 }

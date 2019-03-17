@@ -34,7 +34,7 @@ func (e *TeamCorpsEntity) NickName() string {
 }
 
 func (e *TeamCorpsEntity) EntityType() basis.EntityType {
-	return basis.EntityCorps
+	return basis.EntityTeamCorps
 }
 
 func (e *TeamCorpsEntity) InitEntity() {

@@ -5,7 +5,22 @@
 //
 package basis
 
+type IEntityIndex interface {
+	EntityType() EntityType
+	//检查存在
+	Check(id string) bool
+	//获取one
+	Get(id string) IEntity
+	//添加
+	Add(entity IEntity) error
+	//从索引中移除
+	Remove(id string) (IEntity, error)
+	//更新
+	Update(entity IEntity) error
+}
+
 type IZoneIndex interface {
+	IEntityIndex
 	//检查Zone是否存在
 	CheckZone(zoneId string) bool
 	//获取Zone
@@ -20,6 +35,7 @@ type IZoneIndex interface {
 
 //房间索引
 type IRoomIndex interface {
+	IEntityIndex
 	//检查Room是否存在
 	CheckRoom(roomId string) bool
 	//获取Room
@@ -33,6 +49,7 @@ type IRoomIndex interface {
 }
 
 type ITeamCorpsIndex interface {
+	IEntityIndex
 	//检查Corps是否存在
 	CheckCorps(corpsId string) bool
 	//获取Corps
@@ -47,6 +64,7 @@ type ITeamCorpsIndex interface {
 
 //队伍索引
 type ITeamIndex interface {
+	IEntityIndex
 	//检查Team是否存在
 	CheckTeam(teamId string) bool
 	//获取Team
@@ -61,6 +79,7 @@ type ITeamIndex interface {
 
 //玩家索引
 type IUserIndex interface {
+	IEntityIndex
 	//检查User是否存在
 	CheckUser(userId string) bool
 	//获取User
@@ -75,6 +94,7 @@ type IUserIndex interface {
 
 //频道索引
 type IChannelIndex interface {
+	IEntityIndex
 	//检查Channel是否存在
 	CheckChannel(chanId string) bool
 	//获取Channel

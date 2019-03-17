@@ -24,9 +24,9 @@ type UserEntity struct {
 	Nick string //用户昵称
 	Addr string //用户历史或当前连接地址
 
-	ZoneId string
-	RoomId string
-	locMu  sync.RWMutex
+	LocType basis.EntityType
+	LocId   string
+	locMu   sync.RWMutex
 
 	CorpsId string
 	TeamId  string
@@ -63,33 +63,23 @@ func (e *UserEntity) InitEntity() {
 func (e *UserEntity) DestroyEntity() {
 }
 
-func (e *UserEntity) GetLocation() (zoneId string, roomId string) {
+func (e *UserEntity) GetLocation() (idType basis.EntityType, id string) {
 	e.locMu.RLock()
 	defer e.locMu.RUnlock()
-	return e.ZoneId, e.RoomId
+	return e.LocType, e.LocId
 }
 
-func (e *UserEntity) SetZone(zoneId string, roomId string) {
+func (e *UserEntity) SetLocation(idType basis.EntityType, id string) {
 	e.locMu.Lock()
 	defer e.locMu.Unlock()
-	if zoneId != e.ZoneId {
-		e.ZoneId = zoneId
-		e.UserSubscriber.AddWhite(zoneId)
+	if idType != e.LocType {
+		e.LocType = idType
 	}
-	if roomId != e.RoomId {
-		e.RoomId = roomId
-		e.UserSubscriber.AddWhite(roomId)
+	if id != e.LocId {
+		e.UserSubscriber.RemoveWhite(e.LocId)
+		e.LocId = id
+		e.UserSubscriber.AddWhite(e.LocId)
 	}
-}
-
-func (e *UserEntity) SetRoom(roomId string) {
-	e.locMu.Lock()
-	defer e.locMu.Unlock()
-	if roomId == e.RoomId {
-		return
-	}
-	e.RoomId = roomId
-	e.UserSubscriber.AddWhite(roomId)
 }
 
 //---------------------------------

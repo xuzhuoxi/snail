@@ -27,7 +27,7 @@ func NewIMMOManager() IMMOManager {
 }
 
 func NewMMOManager() *MMOManager {
-	return &MMOManager{}
+	return &MMOManager{logger: logx.DefaultLogger()}
 }
 
 //----------------------------
@@ -52,9 +52,7 @@ func (m *MMOManager) InitManager() {
 	m.bcMgr.InitManager()
 	m.varMgr = manager.NewIVariableManager(m.entityMgr, m.bcMgr)
 	m.varMgr.InitManager()
-	if nil != m.logger {
-		m.SetLogger(m.logger)
-	}
+	m.SetLogger(m.logger)
 }
 
 func (m *MMOManager) DisposeManager() {

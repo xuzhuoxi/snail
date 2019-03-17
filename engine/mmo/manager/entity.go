@@ -39,6 +39,7 @@ type IEntityIndexSet interface {
 	TeamIndex() basis.ITeamIndex
 	TeamCorpsIndex() basis.ITeamCorpsIndex
 	ChannelIndex() basis.IChannelIndex
+	GetEntityIndex(entityType basis.EntityType) basis.IEntityIndex
 }
 
 type IEntityGetter interface {
@@ -54,6 +55,8 @@ type IEntityGetter interface {
 	GetTeamCorps(corpsId string) (basis.ITeamCorpsEntity, bool)
 	//获取频道实例
 	GetChannel(chanId string) (basis.IChannelEntity, bool)
+	//获取实例
+	GetEntity(entityType basis.EntityType, entityId string) (basis.IEntity, bool)
 }
 
 type IEntityManager interface {
@@ -70,7 +73,7 @@ func NewIEntityManager() IEntityManager {
 }
 
 func NewEntityManager() IEntityManager {
-	return &EntityManager{}
+	return &EntityManager{logger: logx.DefaultLogger()}
 }
 
 //----------------------------
@@ -279,6 +282,10 @@ func (m *EntityManager) GetChannel(chanId string) (basis.IChannelEntity, bool) {
 	return nil, false
 }
 
+func (m *EntityManager) GetEntity(entityType basis.EntityType, entityId string) (basis.IEntity, bool) {
+	panic("implement me")
+}
+
 //-----------------------
 
 func (m *EntityManager) ZoneIndex() basis.IZoneIndex {
@@ -303,4 +310,22 @@ func (m *EntityManager) TeamCorpsIndex() basis.ITeamCorpsIndex {
 
 func (m *EntityManager) ChannelIndex() basis.IChannelIndex {
 	return m.channelIndex
+}
+
+func (m *EntityManager) GetEntityIndex(entityType basis.EntityType) basis.IEntityIndex {
+	switch entityType {
+	case basis.EntityZone:
+		return m.zoneIndex
+	case basis.EntityRoom:
+		return m.roomIndex
+	case basis.EntityUser:
+		return m.userIndex
+	case basis.EntityTeam:
+		return m.teamIndex
+	case basis.EntityTeamCorps:
+		return m.teamCorpsIndex
+	case basis.EntityChannel:
+		return m.channelIndex
+	}
+	return nil
 }

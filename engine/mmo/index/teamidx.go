@@ -6,72 +6,45 @@
 package index
 
 import (
-	"github.com/pkg/errors"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
-	"sync"
 )
 
 func NewITeamIndex() basis.ITeamIndex {
-	return &TeamIndex{teamMap: make(map[string]basis.ITeamEntity)}
+	return NewTeamIndex()
 }
 
-func NewTeamIndex() TeamIndex {
-	return TeamIndex{teamMap: make(map[string]basis.ITeamEntity)}
+func NewTeamIndex() *TeamIndex {
+	return &TeamIndex{EntityIndex: *NewEntityIndex("TeamIndex", basis.EntityTeam)}
 }
 
 type TeamIndex struct {
-	teamMap map[string]basis.ITeamEntity
-	mu      sync.RWMutex
+	EntityIndex
 }
 
 func (i *TeamIndex) CheckTeam(teamId string) bool {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.checkTeam(teamId)
-}
-
-func (i *TeamIndex) checkTeam(teamId string) bool {
-	_, ok := i.teamMap[teamId]
-	return ok
+	return i.EntityIndex.Check(teamId)
 }
 
 func (i *TeamIndex) GetTeam(teamId string) basis.ITeamEntity {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.teamMap[teamId]
+	entity := i.EntityIndex.Get(teamId)
+	if nil != entity {
+		return entity.(basis.ITeamEntity)
+	}
+	return nil
 }
 
 func (i *TeamIndex) AddTeam(team basis.ITeamEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == team {
-		return errors.New("TeamIndex.AddTeam Error: team is nil")
-	}
-	teamId := team.UID()
-	if i.checkTeam(teamId) {
-		return errors.New("TeamIndex.AddTeam Error: Team(" + teamId + ") Duplicate")
-	}
-	i.teamMap[teamId] = team
-	return nil
+	return i.EntityIndex.Add(team)
 }
 
 func (i *TeamIndex) RemoveTeam(teamId string) (basis.ITeamEntity, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	e, ok := i.teamMap[teamId]
-	if ok {
-		delete(i.teamMap, teamId)
-		return e, nil
+	c, err := i.EntityIndex.Remove(teamId)
+	if nil != c {
+		return c.(basis.ITeamEntity), err
 	}
-	return nil, errors.New("TeamIndex.RemoveTeam Error: No Team(" + teamId + ")")
+	return nil, err
 }
 
 func (i *TeamIndex) UpdateTeam(team basis.ITeamEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == team {
-		return errors.New("TeamIndex.UpdateTeam Error: team is nil")
-	}
-	i.teamMap[team.UID()] = team
-	return nil
+	return i.EntityIndex.Update(team)
 }

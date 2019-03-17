@@ -28,7 +28,7 @@ func NewIUserManager(entityMgr IEntityManager) IUserManager {
 }
 
 func NewUserManager(entityMgr IEntityManager) *UserManager {
-	return &UserManager{entityMgr: entityMgr}
+	return &UserManager{entityMgr: entityMgr, logger: logx.DefaultLogger()}
 }
 
 //----------------------------
@@ -70,7 +70,7 @@ func (w *UserManager) EnterWorld(user basis.IUserEntity, roomId string) error {
 	userIndex.UpdateUser(user)
 	room := roomIndex.GetRoom(roomId)
 	room.AddChild(user)
-	user.SetZone(room.GetParent(), roomId)
+	user.SetLocation(basis.EntityRoom, roomId)
 	return nil
 }
 
@@ -110,7 +110,7 @@ func (w *UserManager) Transfer(userId string, toRoomId string) error {
 	w.exitCurrentRoom(user)
 	toRoom := roomIndex.GetRoom(toRoomId)
 	toRoom.AddChild(user)
-	user.SetZone(toRoom.GetParent(), toRoomId)
+	user.SetLocation(basis.EntityRoom, roomId)
 	return nil
 }
 
@@ -125,6 +125,6 @@ func (w *UserManager) exitCurrentRoom(user basis.IUserEntity) error {
 	if nil != err {
 		return err
 	}
-	user.SetRoom("")
+	user.SetLocation(basis.EntityNone, "")
 	return nil
 }

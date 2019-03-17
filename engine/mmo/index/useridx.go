@@ -6,72 +6,45 @@
 package index
 
 import (
-	"errors"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
-	"sync"
 )
 
 func NewIUserIndex() basis.IUserIndex {
-	return &UserIndex{userIdMap: make(map[string]basis.IUserEntity)}
+	return NewUserIndex()
 }
 
 func NewUserIndex() *UserIndex {
-	return &UserIndex{userIdMap: make(map[string]basis.IUserEntity)}
+	return &UserIndex{EntityIndex: *NewEntityIndex("UserIndex", basis.EntityUser)}
 }
 
 type UserIndex struct {
-	userIdMap map[string]basis.IUserEntity
-	mu        sync.RWMutex
+	EntityIndex
 }
 
 func (i *UserIndex) CheckUser(userId string) bool {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.checkUser(userId)
-}
-
-func (i *UserIndex) checkUser(userId string) bool {
-	_, ok := i.userIdMap[userId]
-	return ok
+	return i.EntityIndex.Check(userId)
 }
 
 func (i *UserIndex) GetUser(userId string) basis.IUserEntity {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.userIdMap[userId]
+	entity := i.EntityIndex.Get(userId)
+	if nil != entity {
+		return entity.(basis.IUserEntity)
+	}
+	return nil
 }
 
 func (i *UserIndex) AddUser(user basis.IUserEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == user {
-		return errors.New("UserIndex.AddUser Error: user is nil")
-	}
-	userId := user.UID()
-	if i.checkUser(userId) {
-		return errors.New("UserIndex.AddUser Error: UserId(" + userId + ") Duplicate")
-	}
-	i.userIdMap[userId] = user
-	return nil
+	return i.EntityIndex.Add(user)
 }
 
 func (i *UserIndex) RemoveUser(userId string) (basis.IUserEntity, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	e, ok := i.userIdMap[userId]
-	if ok {
-		delete(i.userIdMap, userId)
-		return e, nil
+	c, err := i.EntityIndex.Remove(userId)
+	if nil != c {
+		return c.(basis.IUserEntity), err
 	}
-	return nil, errors.New("UserIndex.RemoveUser Error: No User(" + userId + ")")
+	return nil, err
 }
 
 func (i *UserIndex) UpdateUser(user basis.IUserEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == user {
-		return errors.New("UserIndex.UpdateUser Error: user is nil")
-	}
-	i.userIdMap[user.UID()] = user
-	return nil
+	return i.EntityIndex.Update(user)
 }

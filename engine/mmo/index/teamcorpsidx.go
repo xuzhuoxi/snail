@@ -6,72 +6,45 @@
 package index
 
 import (
-	"errors"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
-	"sync"
 )
 
 func NewITeamCorpsIndex() basis.ITeamCorpsIndex {
-	return &TeamCorpsIndex{corpsMap: make(map[string]basis.ITeamCorpsEntity)}
+	return NewTeamCorpsIndex()
 }
 
-func NewTeamCorpsIndex() TeamCorpsIndex {
-	return TeamCorpsIndex{corpsMap: make(map[string]basis.ITeamCorpsEntity)}
+func NewTeamCorpsIndex() *TeamCorpsIndex {
+	return &TeamCorpsIndex{EntityIndex: *NewEntityIndex("TeamCorpsIndex", basis.EntityTeamCorps)}
 }
 
 type TeamCorpsIndex struct {
-	corpsMap map[string]basis.ITeamCorpsEntity
-	mu       sync.RWMutex
+	EntityIndex
 }
 
 func (i *TeamCorpsIndex) CheckCorps(corpsId string) bool {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.checkCorps(corpsId)
-}
-
-func (i *TeamCorpsIndex) checkCorps(corpsId string) bool {
-	_, ok := i.corpsMap[corpsId]
-	return ok
+	return i.EntityIndex.Check(corpsId)
 }
 
 func (i *TeamCorpsIndex) GetCorps(corpsId string) basis.ITeamCorpsEntity {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.corpsMap[corpsId]
+	entity := i.EntityIndex.Get(corpsId)
+	if nil != entity {
+		return entity.(basis.ITeamCorpsEntity)
+	}
+	return nil
 }
 
 func (i *TeamCorpsIndex) AddCorps(corps basis.ITeamCorpsEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == corps {
-		return errors.New("TeamCorpsIndex.AddCorps Error: corps is nil")
-	}
-	corpsId := corps.UID()
-	if i.checkCorps(corpsId) {
-		return errors.New("TeamCorpsIndex.AddCorps Error: Corps(" + corpsId + ") Duplicate")
-	}
-	i.corpsMap[corpsId] = corps
-	return nil
+	return i.EntityIndex.Add(corps)
 }
 
 func (i *TeamCorpsIndex) RemoveCorps(corpsId string) (basis.ITeamCorpsEntity, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	e, ok := i.corpsMap[corpsId]
-	if ok {
-		delete(i.corpsMap, corpsId)
-		return e, nil
+	c, err := i.EntityIndex.Remove(corpsId)
+	if nil != c {
+		return c.(basis.ITeamCorpsEntity), err
 	}
-	return nil, errors.New("TeamCorpsIndex.RemoveCorps Error: No Corps(" + corpsId + ")")
+	return nil, err
 }
 
 func (i *TeamCorpsIndex) UpdateCorps(corps basis.ITeamCorpsEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == corps {
-		return errors.New("TeamCorpsIndex.UpdateCorps Error: corps is nil")
-	}
-	i.corpsMap[corps.UID()] = corps
-	return nil
+	return i.EntityIndex.Update(corps)
 }

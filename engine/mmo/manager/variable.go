@@ -20,7 +20,7 @@ func NewIVariableManager(entityManager IEntityManager, broadcastManager IBroadca
 }
 
 func NewVariableManager(entityManager IEntityManager, broadcastManager IBroadcastManager) *VariableManager {
-	return &VariableManager{entityMgr: entityManager, bcMgr: broadcastManager}
+	return &VariableManager{entityMgr: entityManager, bcMgr: broadcastManager, logger: logx.DefaultLogger()}
 }
 
 //--------------------------------
@@ -47,7 +47,9 @@ func (m *VariableManager) onEntityVar(evd *eventx.EventData) {
 	data := evd.Data.([]interface{})
 	currentTarget := data[0].(basis.IEntity)
 	varSet := data[1].(basis.VarSet)
-	m.logger.Traceln("onEntityVar", currentTarget.UID(), varSet)
+	if nil != m.logger {
+		m.logger.Traceln("onEntityVar", currentTarget.UID(), varSet)
+	}
 	if currentTarget.EntityType() == basis.EntityUser {
 		m.bcMgr.NotifyUserVars(currentTarget.(basis.IUserEntity), varSet)
 	} else {

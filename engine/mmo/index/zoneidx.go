@@ -6,72 +6,45 @@
 package index
 
 import (
-	"errors"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
-	"sync"
 )
 
 func NewIZoneIndex() basis.IZoneIndex {
-	return &ZoneIndex{zoneMap: make(map[string]basis.IZoneEntity)}
+	return NewZoneIndex()
 }
 
-func NewZoneIndex() ZoneIndex {
-	return ZoneIndex{zoneMap: make(map[string]basis.IZoneEntity)}
+func NewZoneIndex() *ZoneIndex {
+	return &ZoneIndex{EntityIndex: *NewEntityIndex("ZoneIndex", basis.EntityZone)}
 }
 
 type ZoneIndex struct {
-	zoneMap map[string]basis.IZoneEntity
-	mu      sync.RWMutex
+	EntityIndex
 }
 
 func (i *ZoneIndex) CheckZone(zoneId string) bool {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.checkZone(zoneId)
-}
-
-func (i *ZoneIndex) checkZone(zoneId string) bool {
-	_, ok := i.zoneMap[zoneId]
-	return ok
+	return i.EntityIndex.Check(zoneId)
 }
 
 func (i *ZoneIndex) GetZone(zoneId string) basis.IZoneEntity {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.zoneMap[zoneId]
+	entity := i.EntityIndex.Get(zoneId)
+	if nil != entity {
+		return entity.(basis.IZoneEntity)
+	}
+	return nil
 }
 
 func (i *ZoneIndex) AddZone(zone basis.IZoneEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == zone {
-		return errors.New("ZoneIndex.AddZone Error: zone is nil")
-	}
-	zoneId := zone.UID()
-	if i.checkZone(zoneId) {
-		return errors.New("ZoneIndex.AddZone Error: Zone(" + zoneId + ") Duplicate")
-	}
-	i.zoneMap[zoneId] = zone
-	return nil
+	return i.EntityIndex.Add(zone)
 }
 
 func (i *ZoneIndex) RemoveZone(zoneId string) (basis.IZoneEntity, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	e, ok := i.zoneMap[zoneId]
-	if ok {
-		delete(i.zoneMap, zoneId)
-		return e, nil
+	c, err := i.EntityIndex.Remove(zoneId)
+	if nil != c {
+		return c.(basis.IZoneEntity), err
 	}
-	return nil, errors.New("ZoneIndex.RemoveZone Error: No Zone(" + zoneId + ")")
+	return nil, err
 }
 
 func (i *ZoneIndex) UpdateZone(zone basis.IZoneEntity) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	if nil == zone {
-		return errors.New("ZoneIndex.UpdateZone Error: zone is nil")
-	}
-	i.zoneMap[zone.UID()] = zone
-	return nil
+	return i.EntityIndex.Update(zone)
 }

@@ -5,19 +5,28 @@
 //
 package basis
 
-type EntityType int
+type EntityType uint16
 
 const (
-	EntityWorld EntityType = iota + 1
+	EntityWorld EntityType = 1 << iota
 	EntityZone
 	EntityRoom
 	EntityUser
-	EntityCorps
+	EntityTeamCorps
 	EntityTeam
 	EntityChannel
 
-	EntityMax
+	EntityNone EntityType = 0
+	EntityAll  EntityType = EntityWorld | EntityZone | EntityRoom | EntityUser | EntityTeamCorps | EntityTeam | EntityChannel
 )
+
+func (t EntityType) Match(check EntityType) bool {
+	return t&check > 0
+}
+
+func (t EntityType) Include(check EntityType) bool {
+	return t&check == check
+}
 
 type IEntity interface {
 	//唯一标识
@@ -102,9 +111,8 @@ type IUserEntity interface {
 	//用户名
 	UserName() string
 
-	GetLocation() (zoneId string, roomId string)
-	SetZone(zoneId string, roomId string)
-	SetRoom(roomId string)
+	GetLocation() (idType EntityType, id string)
+	SetLocation(idType EntityType, id string)
 
 	GetTeamInfo() (teamId string, corpsId string)
 	SetTeam(teamId string)
