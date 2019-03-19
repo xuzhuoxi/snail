@@ -5,7 +5,10 @@
 //
 package proto
 
-import "github.com/xuzhuoxi/snail/engine/mmo/basis"
+import (
+	"github.com/xuzhuoxi/infra-go/bytex"
+	"github.com/xuzhuoxi/snail/engine/mmo/basis"
+)
 
 const (
 	NameVar  = "m.v"
@@ -56,3 +59,5 @@ func GetVarId(entityType basis.EntityType) string {
 	}
 	return IdNone
 }
+
+var DataBlockHandler = bytex.NewDefaultDataBlockHandler()
