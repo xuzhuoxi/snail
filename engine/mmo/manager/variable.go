@@ -6,6 +6,7 @@
 package manager
 
 import (
+	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
@@ -46,7 +47,7 @@ func (m *VariableManager) SetLogger(logger logx.ILogger) {
 func (m *VariableManager) onEntityVar(evd *eventx.EventData) {
 	data := evd.Data.([]interface{})
 	currentTarget := data[0].(basis.IEntity)
-	varSet := data[1].(basis.VarSet)
+	varSet := data[1].(encodingx.IKeyValue)
 	if nil != m.logger {
 		m.logger.Traceln("onEntityVar", currentTarget.UID(), varSet)
 	}

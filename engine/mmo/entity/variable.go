@@ -6,6 +6,7 @@
 package entity
 
 import (
+	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
 	"sync"
@@ -16,7 +17,7 @@ func NewIVariableSupport(currentTarget basis.IEntity) basis.IVariableSupport {
 }
 
 func NewVariableSupport(currentTarget basis.IEntity) *VariableSupport {
-	return &VariableSupport{currentTarget: currentTarget, vars: make(map[string]interface{})}
+	return &VariableSupport{currentTarget: currentTarget, vars: basis.NewVarSet()}
 }
 
 //---------------------------------------------
@@ -24,11 +25,11 @@ func NewVariableSupport(currentTarget basis.IEntity) *VariableSupport {
 type VariableSupport struct {
 	currentTarget basis.IEntity
 	eventx.EventDispatcher
-	vars basis.VarSet
+	vars encodingx.IKeyValue
 	mu   sync.RWMutex
 }
 
-func (s *VariableSupport) Vars() basis.VarSet {
+func (s *VariableSupport) Vars() encodingx.IKeyValue {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.vars
@@ -37,13 +38,12 @@ func (s *VariableSupport) Vars() basis.VarSet {
 func (s *VariableSupport) SetVar(key string, value interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	diff := s.vars.Set(key, value)
-	if nil != diff {
+	if diff, ok := s.vars.Set(key, value); ok {
 		s.DispatchEvent(basis.EventVariableChanged, s.currentTarget, diff)
 	}
 }
 
-func (s *VariableSupport) SetVars(kv basis.VarSet) {
+func (s *VariableSupport) SetVars(kv encodingx.IKeyValue) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	diff := s.vars.Merge(kv)
@@ -55,19 +55,17 @@ func (s *VariableSupport) SetVars(kv basis.VarSet) {
 func (s *VariableSupport) GetVar(key string) (interface{}, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	val, ok := s.vars[key]
-	return val, ok
+	return s.vars.Get(key)
 }
 
 func (s *VariableSupport) CheckVar(key string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	_, ok := s.vars[key]
-	return ok
+	return s.vars.Check(key)
 }
 
 func (s *VariableSupport) RemoveVar(key string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.vars, key)
+	s.vars.Delete(key)
 }

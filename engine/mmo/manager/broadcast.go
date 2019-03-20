@@ -8,6 +8,7 @@ package manager
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
@@ -38,11 +39,11 @@ type IBroadcastManager interface {
 	//以下为业务型方法------
 
 	//环境实体变量更新
-	NotifyEnvVars(varTarget basis.IEntity, vars basis.VarSet)
+	NotifyEnvVars(varTarget basis.IEntity, vars encodingx.IKeyValue)
 	//用户实体变量更新
-	NotifyUserVars(source basis.IUserEntity, vars basis.VarSet)
+	NotifyUserVars(source basis.IUserEntity, vars encodingx.IKeyValue)
 	//用户实体变量更新
-	NotifyUserVarsCurrent(source basis.IUserEntity, vars basis.VarSet)
+	NotifyUserVarsCurrent(source basis.IUserEntity, vars encodingx.IKeyValue)
 }
 
 func NewIBroadcastManager(entityMgr IEntityManager, sockServer netx.ISockServer, addressProxy netx.IAddressProxy) IBroadcastManager {
@@ -181,13 +182,13 @@ func (m *BroadcastManager) BroadcastCurrent(source basis.IUserEntity, excludeBla
 
 //-----------------------------
 
-func (m *BroadcastManager) NotifyEnvVars(varTarget basis.IEntity, vars basis.VarSet) {
+func (m *BroadcastManager) NotifyEnvVars(varTarget basis.IEntity, vars encodingx.IKeyValue) {
 }
 
-func (m *BroadcastManager) NotifyUserVars(source basis.IUserEntity, vars basis.VarSet) {
+func (m *BroadcastManager) NotifyUserVars(source basis.IUserEntity, vars encodingx.IKeyValue) {
 }
 
-func (m *BroadcastManager) NotifyUserVarsCurrent(source basis.IUserEntity, vars basis.VarSet) {
+func (m *BroadcastManager) NotifyUserVarsCurrent(source basis.IUserEntity, vars encodingx.IKeyValue) {
 }
 
 //-----------------------------

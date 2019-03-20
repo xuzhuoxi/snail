@@ -219,7 +219,7 @@ func (m *EntityManager) removeEntityEventListener(entity basis.IEntity) {
 //事件转发
 func (m *EntityManager) onEntityVar(evd *eventx.EventData) {
 	evd.StopImmediatePropagation()
-	m.DispatchEvent(evd.EventType, m, []interface{}{evd.CurrentTarget(), evd.Data})
+	m.DispatchEvent(evd.EventType, m, []interface{}{evd.CurrentTarget(), evd.Data}) //[0]为实体目标，[1]为变量
 }
 
 //----------------------------
