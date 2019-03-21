@@ -7,7 +7,7 @@ package demo
 
 import (
 	"github.com/xuzhuoxi/snail/module/internal/game/extension"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
 type testA struct {
@@ -16,7 +16,7 @@ type testA struct {
 	C bool
 }
 
-func NewDemoExtension(Name string, SingleCase intfc.IGameSingleCase) *DemoExtension {
+func NewDemoExtension(Name string, SingleCase ifc.IGameSingleCase) *DemoExtension {
 	return &DemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name, SingleCase)}
 }
 

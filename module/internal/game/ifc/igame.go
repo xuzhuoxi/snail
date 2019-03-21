@@ -1,4 +1,4 @@
-package intfc
+package ifc
 
 import "github.com/xuzhuoxi/snail/module/imodule"
 

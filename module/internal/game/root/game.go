@@ -1,17 +1,14 @@
 package root
 
 import (
-	"github.com/xuzhuoxi/infra-go/bytex"
-	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
-	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/imodule"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
 type ModuleGame struct {
 	imodule.ModuleBase
 
-	singleCase intfc.IGameSingleCase
+	singleCase ifc.IGameSingleCase
 	status     *GameStatus
 	server     *GameServer
 }
@@ -38,12 +35,9 @@ func (m *ModuleGame) OnDestroy() {
 func (m *ModuleGame) Destroy() {
 }
 
-func (m *ModuleGame) newSingleCase() intfc.IGameSingleCase {
+func (m *ModuleGame) newSingleCase() ifc.IGameSingleCase {
 	rs := NewGameSingleCase()
-	rs.OnceSetDataBlockHandler(bytex.NewDefaultDataBlockHandler())
-	rs.OnceSetBuffEncoder(gobx.NewGobBuffEncoder(rs.DataBlockHandler()))
-	rs.OnceSetBuffDecoder(gobx.NewGobBuffDecoder(rs.DataBlockHandler()))
-	rs.OnceSetExtensionContainer(extension.NewISnailExtensionContainer())
-	rs.OnceSetLogger(m.Logger)
+	rs.Init()
+	rs.SetLogger(m.Logger)
 	return rs
 }

@@ -6,11 +6,11 @@ import (
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"time"
 )
 
-func NewGameStatus(config conf.ObjectConf, singleCase intfc.IGameSingleCase) *GameStatus {
+func NewGameStatus(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *GameStatus {
 	gameId := config.Id
 	return &GameStatus{
 		gameId:       gameId,
@@ -23,7 +23,7 @@ func NewGameStatus(config conf.ObjectConf, singleCase intfc.IGameSingleCase) *Ga
 type GameStatus struct {
 	gameId       string
 	config       conf.ObjectConf
-	singleCase   intfc.IGameSingleCase
+	singleCase   ifc.IGameSingleCase
 	state        *imodule.ServiceStateDetail
 	rpcRemoteMap map[string]netx.IRPCClient
 }

@@ -3,7 +3,7 @@
 //on 2019-02-18.
 //@author xuzhuoxi
 //
-package intfc
+package ifc
 
 import "github.com/xuzhuoxi/infra-go/extendx/protox"
 

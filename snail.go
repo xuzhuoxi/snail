@@ -12,9 +12,9 @@ func init() {
 	conf.DefaultConfig = conf.ParseConfig("config.json")
 }
 
-func Run() {
+func Run(openGo bool) {
 	startModule()
-	startCmd()
+	startCmd(openGo)
 }
 
 func startModule() {
@@ -23,8 +23,12 @@ func startModule() {
 	logx.Infoln("snail.startModule..........end")
 }
 
-func startCmd() {
+func startCmd(openGo bool) {
 	logx.Infoln("snail.startCmd..........")
-	module.StartCmdListener()
-	logx.Infoln("snail.startCmd..........end")
+	if openGo {
+		go module.StartCmdListener()
+	} else {
+		module.StartCmdListener()
+		logx.Infoln("snail.startCmd..........end")
+	}
 }

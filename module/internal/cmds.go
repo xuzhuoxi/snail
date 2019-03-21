@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	intfc2 "github.com/xuzhuoxi/snail/module/imodule"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"strings"
 )
 
@@ -154,7 +154,7 @@ func cmdLogin(cmdArgs []string, login bool) {
 			fmt.Println(strings.Replace("Game module \"${name}\" is not running!", "${name}", gameName, -1))
 			return
 		}
-		gm, _ := mod.mod.(intfc.ILoginServer)
+		gm, _ := mod.mod.(ifc.ILoginServer)
 		if login {
 			gm.Login()
 		} else {

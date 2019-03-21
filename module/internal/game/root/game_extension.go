@@ -7,15 +7,15 @@ package root
 
 import (
 	"github.com/xuzhuoxi/snail/module/internal/game/extension/demo"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewExtensionConfig(singleCase intfc.IGameSingleCase) *ExtensionConfig {
+func NewExtensionConfig(singleCase ifc.IGameSingleCase) *ExtensionConfig {
 	return &ExtensionConfig{singleCase: singleCase}
 }
 
 type ExtensionConfig struct {
-	singleCase intfc.IGameSingleCase
+	singleCase ifc.IGameSingleCase
 }
 
 func (c *ExtensionConfig) ConfigExtensions() {
@@ -28,6 +28,6 @@ func (c *ExtensionConfig) InitExtensions() {
 	c.singleCase.ExtensionContainer().InitExtensions()
 }
 
-func (c *ExtensionConfig) appendConfig(pid string, extension intfc.IGameExtension) {
+func (c *ExtensionConfig) appendConfig(pid string, extension ifc.IGameExtension) {
 	c.singleCase.ExtensionContainer().AppendExtension(extension)
 }

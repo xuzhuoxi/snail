@@ -8,54 +8,43 @@ package root
 import (
 	"github.com/xuzhuoxi/infra-go/bytex"
 	"github.com/xuzhuoxi/infra-go/encodingx"
+	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
 	"github.com/xuzhuoxi/infra-go/logx"
+	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/engine/extension"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewGameSingleCase() intfc.IGameSingleCase {
+func NewGameSingleCase() ifc.IGameSingleCase {
 	return &GameSingleCase{}
 }
 
 type GameSingleCase struct {
-	dataBlockHandler bytex.IDataBlockHandler
-	buffEncoder      encodingx.IBuffEncoder
-	buffDecoder      encodingx.IBuffDecoder
-	container        extension.ISnailExtensionContainer
-	logger           logx.ILogger
+	isInit             bool
+	dataBlockHandler   bytex.IDataBlockHandler
+	buffEncoder        encodingx.IBuffEncoder
+	buffDecoder        encodingx.IBuffDecoder
+	extensionContainer extension.ISnailExtensionContainer
+	addressProxy       netx.IAddressProxy
+
+	logger logx.ILogger
 }
 
-func (s *GameSingleCase) OnceSetBuffEncoder(encoder encodingx.IBuffEncoder) {
-	if nil == s.buffEncoder {
-		s.buffEncoder = encoder
+func (s *GameSingleCase) Init() {
+	if s.isInit {
+		return
 	}
+	s.isInit = true
+	s.dataBlockHandler = bytex.NewDefaultDataBlockHandler()
+	s.buffEncoder = gobx.NewGobBuffEncoder(s.dataBlockHandler)
+	s.buffDecoder = gobx.NewGobBuffDecoder(s.dataBlockHandler)
+	s.extensionContainer = extension.NewISnailExtensionContainer()
+	s.addressProxy = netx.NewIAddressProxy()
 }
 
-func (s *GameSingleCase) OnceSetBuffDecoder(decoder encodingx.IBuffDecoder) {
-	if nil == s.buffDecoder {
-		s.buffDecoder = decoder
-	}
+func (s *GameSingleCase) SetLogger(logger logx.ILogger) {
+	s.logger = logger
 }
-
-func (s *GameSingleCase) OnceSetDataBlockHandler(handler bytex.IDataBlockHandler) {
-	if nil == s.dataBlockHandler {
-		s.dataBlockHandler = handler
-	}
-}
-
-func (s *GameSingleCase) OnceSetExtensionContainer(container extension.ISnailExtensionContainer) {
-	if nil == s.container {
-		s.container = container
-	}
-}
-
-func (s *GameSingleCase) OnceSetLogger(logger logx.ILogger) {
-	if nil == s.logger {
-		s.logger = logger
-	}
-}
-
-//--------------------------------
 
 func (s *GameSingleCase) DataBlockHandler() bytex.IDataBlockHandler {
 	return s.dataBlockHandler
@@ -70,7 +59,11 @@ func (s *GameSingleCase) BuffDecoder() encodingx.IBuffDecoder {
 }
 
 func (s *GameSingleCase) ExtensionContainer() extension.ISnailExtensionContainer {
-	return s.container
+	return s.extensionContainer
+}
+
+func (s *GameSingleCase) AddressProxy() netx.IAddressProxy {
+	return s.addressProxy
 }
 
 func (s *GameSingleCase) Logger() logx.ILogger {

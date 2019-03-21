@@ -130,7 +130,7 @@ func newInternal(name string) (*internalMod, error) {
 		return nil, errors.New("ModuleName Undefined:" + string(m))
 	}
 	rs := &internalMod{name: name, mod: m.NewModule()}
-	rs.mod.SetConfig(*c)
+	rs.mod.SetConfig(c)
 	return rs, nil
 }
 

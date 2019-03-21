@@ -10,14 +10,15 @@ import (
 	"github.com/xuzhuoxi/infra-go/bytex"
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/encodingx/jsonx"
+	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"sync"
 )
 
-func NewGameServer(config conf.ObjectConf, singleCase intfc.IGameSingleCase) *GameServer {
+func NewGameServer(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *GameServer {
 	s := &GameServer{}
 	s.config = config
 	s.SingleCase = singleCase
@@ -27,9 +28,9 @@ func NewGameServer(config conf.ObjectConf, singleCase intfc.IGameSingleCase) *Ga
 
 type GameServer struct {
 	config     conf.ObjectConf
-	SingleCase intfc.IGameSingleCase
+	SingleCase ifc.IGameSingleCase
 
-	Server []netx.ISockServer
+	Server []netx.ITCPServer
 
 	BuffToData bytex.IBuffToData
 	buffMu     sync.Mutex
@@ -51,17 +52,13 @@ func (s *GameServer) StartServer() {
 		if !ok {
 			panic("Service[" + service + "] Undefined!")
 		}
-		server := netx.NewTCPServer(100)
-		server.SetLogger(s.SingleCase.Logger())
-
-		server.GetPackHandler().AppendPackHandler(newPackHandler(s.SingleCase, *s.extensionCfg).onPack)
-		s.Server = append(s.Server, server)
-		go server.StartServer(netx.SockParams{Network: conf.Network, LocalAddress: conf.Addr})
+		s.startService(conf)
 	}
 }
 
 func (s *GameServer) StopServer() {
 	for index := len(s.Server) - 1; index >= 0; index-- {
+		s.Server[index].RemoveEventListener(netx.ServerEventConnClosed, s.onConnClosed)
 		s.Server[index].StopServer()
 	}
 	s.Server = nil
@@ -69,7 +66,24 @@ func (s *GameServer) StopServer() {
 
 //--------------------------------------------------
 
-func newPackHandler(singleCase intfc.IGameSingleCase, extensionCfg ExtensionConfig) *packHandler {
+func (s *GameServer) startService(conf conf.ServiceConf) {
+	server := netx.NewTCPServer()
+	s.Server = append(s.Server, server)
+
+	server.SetLinkMax(100)
+	server.SetLogger(s.SingleCase.Logger())
+	server.GetPackHandler().AppendPackHandler(newPackHandler(s.SingleCase, *s.extensionCfg).onPack)
+	server.AddEventListener(netx.ServerEventConnClosed, s.onConnClosed)
+
+	go server.StartServer(netx.SockParams{Network: conf.Network, LocalAddress: conf.Addr})
+}
+
+func (s *GameServer) onConnClosed(evd *eventx.EventData) {
+	address := evd.Data.(string)
+	s.SingleCase.AddressProxy().RemoveByAddress(address)
+}
+
+func newPackHandler(singleCase ifc.IGameSingleCase, extensionCfg ExtensionConfig) *packHandler {
 	return &packHandler{
 		buffToData:   bytex.NewBuffToData(bytex.NewDefaultDataBlockHandler()),
 		extensionCfg: extensionCfg,
@@ -81,7 +95,7 @@ func newPackHandler(singleCase intfc.IGameSingleCase, extensionCfg ExtensionConf
 type packHandler struct {
 	buffToData   bytex.IBuffToData
 	extensionCfg ExtensionConfig //克隆，减少资源竞争
-	singleCase   intfc.IGameSingleCase
+	singleCase   ifc.IGameSingleCase
 	decoder      encodingx.IDecodeHandler
 }
 

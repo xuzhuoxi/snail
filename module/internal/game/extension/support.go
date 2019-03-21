@@ -8,17 +8,17 @@ package extension
 import (
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/logx"
-	"github.com/xuzhuoxi/snail/module/internal/game/intfc"
+	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewGameExtensionSupport(Name string, SingleCase intfc.IGameSingleCase) GameExtensionSupport {
+func NewGameExtensionSupport(Name string, SingleCase ifc.IGameSingleCase) GameExtensionSupport {
 	support := protox.NewProtocolExtensionSupport(Name)
 	return GameExtensionSupport{ProtocolExtensionSupport: support, SingleCase: SingleCase}
 }
 
 type GameExtensionSupport struct {
 	protox.ProtocolExtensionSupport
-	SingleCase intfc.IGameSingleCase
+	SingleCase ifc.IGameSingleCase
 }
 
 func (s *GameExtensionSupport) RequestDataType() protox.RequestDataType {

@@ -31,7 +31,7 @@ func (oc ObjectConf) LogDir() string {
 	return basePath + "/log/"
 }
 
-func (c ObjectConf) GetServiceConf(name string) (*ServiceConf, bool) {
+func (c ObjectConf) GetServiceConf(name string) (ServiceConf, bool) {
 	return c.conf.GetServiceConf(name)
 }
 
@@ -46,20 +46,20 @@ type Conf struct {
 	mapObject  map[string]ObjectConf
 }
 
-func (c *Conf) GetServiceConf(name string) (*ServiceConf, bool) {
+func (c *Conf) GetServiceConf(name string) (ServiceConf, bool) {
 	rs, has := c.mapService[name]
 	if has {
-		return &rs, true
+		return rs, true
 	}
-	return nil, false
+	return ServiceConf{}, false
 }
 
-func (c *Conf) GetObjectById(id string) (*ObjectConf, bool) {
+func (c *Conf) GetObjectById(id string) (ObjectConf, bool) {
 	val, has := c.mapObject[id]
 	if has {
-		return &val, true
+		return val, true
 	}
-	return nil, false
+	return ObjectConf{}, false
 }
 
 func (c *Conf) handleData() {
@@ -106,10 +106,10 @@ func ParseConfig(configName string) *Conf {
 	return cfg
 }
 
-func GetServiceConf(name string) (*ServiceConf, bool) {
+func GetServiceConf(name string) (ServiceConf, bool) {
 	return DefaultConfig.GetServiceConf(name)
 }
 
-func GetObjectById(name string) (*ObjectConf, bool) {
+func GetObjectById(name string) (ObjectConf, bool) {
 	return DefaultConfig.GetObjectById(name)
 }
