@@ -21,10 +21,6 @@ type GameExtensionSupport struct {
 	SingleCase ifc.IGameSingleCase
 }
 
-func (s *GameExtensionSupport) RequestDataType() protox.RequestDataType {
-	return protox.StructValue
-}
-
-func (e *GameExtensionSupport) Logger() logx.ILogger {
+func (e *GameExtensionSupport) GetLogger() logx.ILogger {
 	return e.SingleCase.Logger()
 }

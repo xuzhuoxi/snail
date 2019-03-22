@@ -5,6 +5,10 @@
 //
 package extension
 
+import (
+	"github.com/xuzhuoxi/infra-go/extendx/protox"
+)
+
 type ISnailInitExtension interface {
 	InitExtension() error
 }
@@ -16,3 +20,5 @@ type ISnailSaveExtension interface {
 type ISnailDestroyExtension interface {
 	DestroyExtension() error
 }
+
+type ISnailExtension = protox.IProtocolExtension

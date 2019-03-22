@@ -6,28 +6,22 @@
 package root
 
 import (
+	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/extension/demo"
+	"github.com/xuzhuoxi/snail/module/internal/game/extension/user"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewExtensionConfig(singleCase ifc.IGameSingleCase) *ExtensionConfig {
-	return &ExtensionConfig{singleCase: singleCase}
-}
-
-type ExtensionConfig struct {
-	singleCase ifc.IGameSingleCase
-}
-
-func (c *ExtensionConfig) ConfigExtensions() {
-	singleCase := c.singleCase
-	c.appendConfig("Demo1", demo.NewDemoExtension("Demo1", singleCase))
-	c.appendConfig("Demo2", demo.NewDemoExtension("Demo2", singleCase))
-}
-
-func (c *ExtensionConfig) InitExtensions() {
-	c.singleCase.ExtensionContainer().InitExtensions()
-}
-
-func (c *ExtensionConfig) appendConfig(pid string, extension ifc.IGameExtension) {
-	c.singleCase.ExtensionContainer().AppendExtension(extension)
+func registerExtension(container extension.ISnailExtensionContainer, single ifc.IGameSingleCase) {
+	if nil == container || nil == single {
+		return
+	}
+	funcAppend := func(container extension.ISnailExtensionContainer, extension extension.ISnailExtension) {
+		extension.InitProtocolId()
+		container.AppendExtension(extension)
+	}
+	funcAppend(container, demo.NewNoneDemoExtension("NoneDemo", single))
+	funcAppend(container, demo.NewBinaryDemoExtension("BinaryDemo", single))
+	funcAppend(container, demo.NewObjDemoExtension("ObjDemo", single))
+	funcAppend(container, user.NewLoginExtension("Login", single))
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
@@ -20,12 +19,11 @@ func NewGameSingleCase() ifc.IGameSingleCase {
 }
 
 type GameSingleCase struct {
-	isInit             bool
-	dataBlockHandler   bytex.IDataBlockHandler
-	buffEncoder        encodingx.IBuffEncoder
-	buffDecoder        encodingx.IBuffDecoder
-	extensionContainer extension.ISnailExtensionContainer
-	addressProxy       netx.IAddressProxy
+	isInit           bool
+	dataBlockHandler bytex.IDataBlockHandler
+	buffEncoder      encodingx.IBuffEncoder
+	buffDecoder      encodingx.IBuffDecoder
+	addressProxy     netx.IAddressProxy
 
 	logger logx.ILogger
 }
@@ -38,7 +36,6 @@ func (s *GameSingleCase) Init() {
 	s.dataBlockHandler = bytex.NewDefaultDataBlockHandler()
 	s.buffEncoder = gobx.NewGobBuffEncoder(s.dataBlockHandler)
 	s.buffDecoder = gobx.NewGobBuffDecoder(s.dataBlockHandler)
-	s.extensionContainer = extension.NewISnailExtensionContainer()
 	s.addressProxy = netx.NewIAddressProxy()
 }
 
@@ -56,10 +53,6 @@ func (s *GameSingleCase) BuffEncoder() encodingx.IBuffEncoder {
 
 func (s *GameSingleCase) BuffDecoder() encodingx.IBuffDecoder {
 	return s.buffDecoder
-}
-
-func (s *GameSingleCase) ExtensionContainer() extension.ISnailExtensionContainer {
-	return s.extensionContainer
 }
 
 func (s *GameSingleCase) AddressProxy() netx.IAddressProxy {

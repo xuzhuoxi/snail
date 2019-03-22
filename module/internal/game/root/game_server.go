@@ -11,9 +11,11 @@ import (
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/encodingx/jsonx"
 	"github.com/xuzhuoxi/infra-go/eventx"
+	"github.com/xuzhuoxi/infra-go/extendx"
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"sync"
 )
@@ -30,23 +32,19 @@ type GameServer struct {
 	config     conf.ObjectConf
 	SingleCase ifc.IGameSingleCase
 
-	Server []netx.ITCPServer
+	Servers    []netx.ITCPServer
+	Containers []extension.ISnailExtensionContainer
 
 	BuffToData bytex.IBuffToData
 	buffMu     sync.Mutex
-
-	extensionCfg *ExtensionConfig
 
 	index int
 }
 
 func (s *GameServer) InitServer() {
-	s.extensionCfg = NewExtensionConfig(s.SingleCase)
-	s.extensionCfg.ConfigExtensions()
 }
 
 func (s *GameServer) StartServer() {
-	s.extensionCfg.InitExtensions()
 	for _, service := range s.config.ServiceList {
 		conf, ok := s.config.GetServiceConf(service)
 		if !ok {
@@ -57,22 +55,29 @@ func (s *GameServer) StartServer() {
 }
 
 func (s *GameServer) StopServer() {
-	for index := len(s.Server) - 1; index >= 0; index-- {
-		s.Server[index].RemoveEventListener(netx.ServerEventConnClosed, s.onConnClosed)
-		s.Server[index].StopServer()
+	for index := len(s.Servers) - 1; index >= 0; index-- {
+		s.Servers[index].RemoveEventListener(netx.ServerEventConnClosed, s.onConnClosed)
+		s.Servers[index].StopServer()
 	}
-	s.Server = nil
+	s.Servers = nil
 }
 
 //--------------------------------------------------
 
+//tcp
+//json
 func (s *GameServer) startService(conf conf.ServiceConf) {
+	container := extension.NewISnailExtensionContainer()
+	registerExtension(container, s.SingleCase)
+	container.InitExtensions()
+	s.Containers = append(s.Containers, container)
+
 	server := netx.NewTCPServer()
-	s.Server = append(s.Server, server)
+	s.Servers = append(s.Servers, server)
 
 	server.SetLinkMax(100)
 	server.SetLogger(s.SingleCase.Logger())
-	server.GetPackHandler().AppendPackHandler(newPackHandler(s.SingleCase, *s.extensionCfg).onPack)
+	server.GetPackHandler().AppendPackHandler(newPackHandler(s.SingleCase, server, container).onPack)
 	server.AddEventListener(netx.ServerEventConnClosed, s.onConnClosed)
 
 	go server.StartServer(netx.SockParams{Network: conf.Network, LocalAddress: conf.Addr})
@@ -83,56 +88,63 @@ func (s *GameServer) onConnClosed(evd *eventx.EventData) {
 	s.SingleCase.AddressProxy().RemoveByAddress(address)
 }
 
-func newPackHandler(singleCase ifc.IGameSingleCase, extensionCfg ExtensionConfig) *packHandler {
+//---------------------------
+
+func newPackHandler(singleCase ifc.IGameSingleCase, server netx.ISockServer, container extension.ISnailExtensionContainer) *packHandler {
 	return &packHandler{
-		buffToData:   bytex.NewBuffToData(bytex.NewDefaultDataBlockHandler()),
-		extensionCfg: extensionCfg,
-		singleCase:   singleCase,
-		decoder:      jsonx.NewDefaultJsonCodingHandler(),
+		singleCase: singleCase,
+		server:     server,
+		container:  container,
+		buffToData: bytex.NewBuffToData(bytex.NewDefaultDataBlockHandler()),
+		decoder:    jsonx.NewDefaultJsonCodingHandler(),
 	}
 }
 
 type packHandler struct {
-	buffToData   bytex.IBuffToData
-	extensionCfg ExtensionConfig //克隆，减少资源竞争
-	singleCase   ifc.IGameSingleCase
-	decoder      encodingx.IDecodeHandler
+	singleCase ifc.IGameSingleCase
+	container  extension.ISnailExtensionContainer
+	buffToData bytex.IBuffToData
+	decoder    encodingx.IDecodeHandler
+
+	server netx.ISockServer
 }
 
-func (h *packHandler) onPack(msgBytes []byte, info interface{}) bool {
-	name, pid, uid, data := h.parsePackMessage(msgBytes)
+func (h *packHandler) onPack(msgData []byte, senderAddress string, other interface{}) bool {
+	name, pid, uid, data := h.parsePackMessage(msgData)
 	extension := h.getProtocolExtension(name)
 	if nil == extension {
 		h.singleCase.Logger().Warnln(fmt.Sprintf("Undefined Extension(%s)! Sender(%s)", name, uid))
 		return false
 	}
-	if !extension.CheckProtocolId(pid) {
+	if !extension.CheckProtocolId(pid) { //有效性检查
 		h.singleCase.Logger().Warnln(fmt.Sprintf("Undefined ProtoId(%s) Send to Extension(%s)! Sender(%s)", pid, name, uid))
 		return false
 	}
-	if _, ok := extension.(protox.IRequestExtension); ok {
-		if be, ok := extension.(protox.IBeforeRequestExtension); ok {
-			be.BeforeRequest(pid)
+	if be, ok := extension.(protox.IBeforeRequestExtension); ok { //前置处理
+		be.BeforeRequest(pid)
+	}
+	response := &extendx.SockServerResponse{SockServer: h.server, Address: senderAddress, AddressProxy: h.singleCase.AddressProxy()}
+	if len(data) == 0 {
+		if ne, ok := extension.(protox.IOnNoneRequestExtension); ok {
+			ne.OnRequest(response, pid, uid)
 		}
-		if ore, ok := extension.(protox.IOnRequestExtension); ok {
-			dataType := ore.RequestDataType()
-			switch {
-			case dataType == protox.None || len(data) == 0:
-				h.handleRequestNone(ore, pid, uid)
-			case dataType == protox.ByteArray:
-				h.handleRequestByteArray(ore, pid, uid, data)
-			case dataType == protox.StructValue:
-				h.handleRequestStructValue(ore, pid, uid, data)
-			}
+	} else {
+		switch ne := extension.(type) {
+		case protox.IOnNoneRequestExtension:
+			ne.OnRequest(response, pid, uid)
+		case protox.IOnBinaryRequestExtension:
+			h.handleRequestBinary(response, ne, pid, uid, data)
+		case protox.IOnObjectRequestExtension:
+			h.handleRequestObject(response, ne, pid, uid, data)
 		}
-		if ae, ok := extension.(protox.IAfterRequestExtension); ok {
-			ae.AfterRequest(pid)
-		}
+	}
+	if ae, ok := extension.(protox.IAfterRequestExtension); ok { //后置处理
+		ae.AfterRequest(pid)
 	}
 	return true
 }
 
-func (h *packHandler) handleRequestStructValue(extension protox.IOnRequestExtension, pid string, uid string, data [][]byte) {
+func (h *packHandler) handleRequestObject(response extendx.IExtensionResponse, extension protox.IOnObjectRequestExtension, pid string, uid string, data [][]byte) {
 	var list []interface{}
 	for _, bs := range data {
 		newData := extension.GetRequestData(pid)
@@ -142,40 +154,32 @@ func (h *packHandler) handleRequestStructValue(extension protox.IOnRequestExtens
 	if len(list) > 1 {
 		if be, ok := extension.(protox.IBatchExtension); ok {
 			if be.Batch() {
-				extension.OnRequest(pid, uid, list[0], list[1:]...)
+				extension.OnRequest(response, pid, uid, list[0], list[1:]...)
 				return
 			}
 		}
 		for _, val := range list {
-			extension.OnRequest(pid, uid, val)
+			extension.OnRequest(response, pid, uid, val)
 		}
 	} else {
-		extension.OnRequest(pid, uid, list[0])
+		extension.OnRequest(response, pid, uid, list[0])
 	}
 }
 
-func (h *packHandler) handleRequestByteArray(extension protox.IOnRequestExtension, pid string, uid string, data [][]byte) {
+func (h *packHandler) handleRequestBinary(response extendx.IExtensionResponse, extension protox.IOnBinaryRequestExtension, pid string, uid string, data [][]byte) {
 	if len(data) > 1 {
 		if be, ok := extension.(protox.IBatchExtension); ok {
 			if be.Batch() {
-				var data2 []interface{}
-				for index := 1; index < len(data); index++ {
-					data2 = append(data2, data[index])
-				}
-				extension.OnRequest(pid, uid, data[0], data2...)
+				extension.OnRequest(response, pid, uid, data[0], data[1:]...)
 				return
 			}
 		}
 		for _, bs := range data {
-			extension.OnRequest(pid, uid, bs)
+			extension.OnRequest(response, pid, uid, bs)
 		}
 	} else {
-		extension.OnRequest(pid, uid, data[0])
+		extension.OnRequest(response, pid, uid, data[0])
 	}
-}
-
-func (h *packHandler) handleRequestNone(extension protox.IOnRequestExtension, pid string, uid string) {
-	extension.OnRequest(pid, uid, nil)
 }
 
 //block0 : eName utf8
@@ -201,9 +205,9 @@ func (h *packHandler) parsePackMessage(msgBytes []byte) (name string, pid string
 	return
 }
 
-func (h *packHandler) getProtocolExtension(pid string) protox.IProtocolExtension {
-	e := h.singleCase.ExtensionContainer().GetExtension(pid)
-	if pe, ok := e.(protox.IProtocolExtension); ok {
+func (h *packHandler) getProtocolExtension(pid string) ifc.IGameExtension {
+	e := h.container.GetExtension(pid)
+	if pe, ok := e.(ifc.IGameExtension); ok {
 		return pe
 	}
 	return nil

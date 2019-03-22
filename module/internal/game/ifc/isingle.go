@@ -10,14 +10,12 @@ import (
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/snail/engine/extension"
 )
 
 type IGameSingleCase interface {
 	DataBlockHandler() bytex.IDataBlockHandler
 	BuffEncoder() encodingx.IBuffEncoder
 	BuffDecoder() encodingx.IBuffDecoder
-	ExtensionContainer() extension.ISnailExtensionContainer
 	AddressProxy() netx.IAddressProxy
 	Logger() logx.ILogger
 
