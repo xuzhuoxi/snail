@@ -124,19 +124,13 @@ func (h *packHandler) onPack(msgData []byte, senderAddress string, other interfa
 		be.BeforeRequest(pid)
 	}
 	response := &extendx.SockServerResponse{SockServer: h.server, Address: senderAddress, AddressProxy: h.singleCase.AddressProxy()}
-	if len(data) == 0 {
-		if ne, ok := extension.(protox.IOnNoneRequestExtension); ok {
-			ne.OnRequest(response, pid, uid)
-		}
-	} else {
-		switch ne := extension.(type) {
-		case protox.IOnNoneRequestExtension:
-			ne.OnRequest(response, pid, uid)
-		case protox.IOnBinaryRequestExtension:
-			h.handleRequestBinary(response, ne, pid, uid, data)
-		case protox.IOnObjectRequestExtension:
-			h.handleRequestObject(response, ne, pid, uid, data)
-		}
+	switch ne := extension.(type) {
+	case protox.IOnNoneRequestExtension:
+		ne.OnRequest(response, pid, uid)
+	case protox.IOnBinaryRequestExtension:
+		h.handleRequestBinary(response, ne, pid, uid, data)
+	case protox.IOnObjectRequestExtension:
+		h.handleRequestObject(response, ne, pid, uid, data)
 	}
 	if ae, ok := extension.(protox.IAfterRequestExtension); ok { //后置处理
 		ae.AfterRequest(pid)
