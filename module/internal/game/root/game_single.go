@@ -6,11 +6,7 @@
 package root
 
 import (
-	"github.com/xuzhuoxi/infra-go/bytex"
-	"github.com/xuzhuoxi/infra-go/encodingx"
-	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
 	"github.com/xuzhuoxi/infra-go/logx"
-	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
@@ -19,12 +15,7 @@ func NewGameSingleCase() ifc.IGameSingleCase {
 }
 
 type GameSingleCase struct {
-	isInit           bool
-	dataBlockHandler bytex.IDataBlockHandler
-	buffEncoder      encodingx.IBuffEncoder
-	buffDecoder      encodingx.IBuffDecoder
-	addressProxy     netx.IAddressProxy
-
+	isInit bool
 	logger logx.ILogger
 }
 
@@ -33,32 +24,11 @@ func (s *GameSingleCase) Init() {
 		return
 	}
 	s.isInit = true
-	s.dataBlockHandler = bytex.NewDefaultDataBlockHandler()
-	s.buffEncoder = gobx.NewGobBuffEncoder(s.dataBlockHandler)
-	s.buffDecoder = gobx.NewGobBuffDecoder(s.dataBlockHandler)
-	s.addressProxy = netx.NewIAddressProxy()
+}
+func (s *GameSingleCase) GetLogger() logx.ILogger {
+	return s.logger
 }
 
 func (s *GameSingleCase) SetLogger(logger logx.ILogger) {
 	s.logger = logger
-}
-
-func (s *GameSingleCase) DataBlockHandler() bytex.IDataBlockHandler {
-	return s.dataBlockHandler
-}
-
-func (s *GameSingleCase) BuffEncoder() encodingx.IBuffEncoder {
-	return s.buffEncoder
-}
-
-func (s *GameSingleCase) BuffDecoder() encodingx.IBuffDecoder {
-	return s.buffDecoder
-}
-
-func (s *GameSingleCase) AddressProxy() netx.IAddressProxy {
-	return s.addressProxy
-}
-
-func (s *GameSingleCase) Logger() logx.ILogger {
-	return s.logger
 }

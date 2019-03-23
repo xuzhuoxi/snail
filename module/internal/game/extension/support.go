@@ -22,5 +22,5 @@ type GameExtensionSupport struct {
 }
 
 func (e *GameExtensionSupport) GetLogger() logx.ILogger {
-	return e.SingleCase.Logger()
+	return e.SingleCase.GetLogger()
 }

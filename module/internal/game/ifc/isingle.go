@@ -6,19 +6,12 @@
 package ifc
 
 import (
-	"github.com/xuzhuoxi/infra-go/bytex"
-	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/logx"
-	"github.com/xuzhuoxi/infra-go/netx"
 )
 
 type IGameSingleCase interface {
-	DataBlockHandler() bytex.IDataBlockHandler
-	BuffEncoder() encodingx.IBuffEncoder
-	BuffDecoder() encodingx.IBuffDecoder
-	AddressProxy() netx.IAddressProxy
-	Logger() logx.ILogger
+	logx.ILoggerGetter
+	logx.ILoggerSetter
 
 	Init()
-	logx.ILoggerSetter
 }

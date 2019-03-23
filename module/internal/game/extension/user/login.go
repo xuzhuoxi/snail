@@ -32,16 +32,16 @@ func (e *LoginExtension) InitProtocolId() {
 func (e *LoginExtension) OnRequest(resp extendx.IExtensionResponse, protoId string, uid string, data []byte, data2 ...[]byte) {
 	password := string(data)
 	if e.check(uid, password) {
-		e.SingleCase.AddressProxy().MapIdAddress(uid, resp.SenderAddress())
+		ifc.AddressProxy.MapIdAddress(uid, resp.SenderAddress())
 		switch protoId {
 		case LoginId:
 			break
 		case ReLoginId:
 			break
 		}
-		e.GetLogger().Debugln("LoginExtension.OnRequest:", "Check Succ!", protoId, uid, password)
+		//e.GetLogger().Traceln("LoginExtension.OnRequest:", "Check Succ!", protoId, uid, password)
 	} else {
-		e.GetLogger().Debugln("LoginExtension.OnRequest:", "Check Fail!", protoId, uid, password)
+		e.GetLogger().Warnln("LoginExtension.OnRequest:", "Check Fail!", protoId, uid, password)
 	}
 }
 

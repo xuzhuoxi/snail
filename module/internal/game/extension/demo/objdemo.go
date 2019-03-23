@@ -29,6 +29,10 @@ type ObjDemoExtension struct {
 	extension.GameExtensionSupport
 }
 
+func (e *ObjDemoExtension) Batch() bool {
+	return true
+}
+
 func (e *ObjDemoExtension) InitProtocolId() {
 	e.ProtoIdToValue["Obj_0"] = testA{}
 }

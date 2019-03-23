@@ -45,11 +45,7 @@ func (s *GameStatus) ToSimpleState() imodule.ServiceState {
 }
 
 func (s *GameStatus) logger() logx.ILogger {
-	return s.singleCase.Logger()
-}
-
-func (s *GameStatus) encoder() encodingx.IBuffEncoder {
-	return s.singleCase.BuffEncoder()
+	return s.singleCase.GetLogger()
 }
 
 //---------------------------------------------
@@ -138,8 +134,11 @@ func (s *GameStatus) notifyConnected(toName string) {
 	//s.logger().Debugln(32, dataS2)
 	//args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnConnected, Data: append(append(dataM, dataL...), dataS...)}
 
-	s.encoder().EncodeDataToBuff(module, link, state)
-	data := s.encoder().ReadBytes()
+	var data []byte
+	ifc.HandleEncode(func(encoder encodingx.IBuffEncoder) {
+		encoder.EncodeDataToBuff(module, link, state)
+		data = encoder.ReadBytes()
+	})
 
 	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnConnected, Data: data}
 	//s.logger().Debugln("GameStatus.Debug.notifyConnected:", *args)
@@ -161,8 +160,11 @@ func (s *GameStatus) notifyState(toName string) {
 	toClient := s.rpcRemoteMap[toName]
 
 	state := s.ToSimpleState()
-	s.encoder().EncodeDataToBuff(state)
-	data := s.encoder().ReadBytes()
+	var data []byte
+	ifc.HandleEncode(func(encoder encodingx.IBuffEncoder) {
+		encoder.EncodeDataToBuff(state)
+		data = encoder.ReadBytes()
+	})
 
 	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_UpdateState, Data: data}
 	//s.logger().Debugln("GameStatus.Debug.notifyState:", args.Data, state)
