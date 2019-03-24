@@ -17,7 +17,6 @@ import (
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
-	"sync"
 )
 
 func NewGameServer(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *GameServer {
@@ -114,7 +113,6 @@ type packHandler struct {
 	singleCase ifc.IGameSingleCase
 	container  extension.ISnailExtensionContainer
 	server     netx.ISockServer
-	syncLock   sync.Mutex
 }
 
 func (h *packHandler) GetLogger() logx.ILogger {
@@ -122,10 +120,8 @@ func (h *packHandler) GetLogger() logx.ILogger {
 }
 
 //消息处理入口，这里是并发方法
-//msgData非共享的，但就是会发生并发问题，现在没搞明白
+//msgData非共享的，但在parsePackMessage后这部分数据会发生变化
 func (h *packHandler) onPack(msgData []byte, senderAddress string, other interface{}) bool {
-	h.syncLock.Lock()
-	defer h.syncLock.Unlock()
 	name, pid, uid, data := h.parsePackMessage(msgData)
 	extension := h.getProtocolExtension(name)
 	if nil == extension {
@@ -207,6 +203,7 @@ func (h *packHandler) handleRequestBinary(response extendx.IExtensionResponse, e
 //[n]其它信息
 //这里为并发区域，但没有共享资源，可是就是出并发问题
 func (h *packHandler) parsePackMessage(msgBytes []byte) (name string, pid string, uid string, data [][]byte) {
+	index := 0
 	ifc.HandleBuffToData(func(buffToData bytex.IBuffToData) {
 		buffToData.WriteBytes(msgBytes)
 		name = string(buffToData.ReadData())
@@ -214,13 +211,14 @@ func (h *packHandler) parsePackMessage(msgBytes []byte) (name string, pid string
 		uid = string(buffToData.ReadData())
 		if buffToData.Len() > 0 {
 			for buffToData.Len() > 0 {
-				d := buffToData.ReadData()
+				n, d := buffToData.ReadDataTo(msgBytes[index:]) //由于msgBytes前部分数据已经处理完成，可以利用这部分空间
 				//h.singleCase.GetLogger().Traceln("parsePackMessage", uid, d)
 				if nil == d {
 					//h.singleCase.GetLogger().Warnln("data is nil")
 					break
 				}
 				data = append(data, d)
+				index += n
 			}
 		}
 	})
