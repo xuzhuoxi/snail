@@ -70,7 +70,7 @@ func (s *GameServer) startService(conf conf.ServiceConf) {
 	server := netx.NewTCPServer()
 	s.Servers = append(s.Servers, server)
 
-	server.SetLinkMax(100)
+	server.SetMax(100)
 	server.SetLogger(s.SingleCase.GetLogger())
 	server.GetPackHandler().AppendPackHandler(newPackHandler(s.SingleCase, server, container).onPack)
 	server.AddEventListener(netx.ServerEventConnClosed, s.onConnClosed)
