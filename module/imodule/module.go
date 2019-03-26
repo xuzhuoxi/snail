@@ -2,7 +2,6 @@ package imodule
 
 import (
 	"github.com/xuzhuoxi/infra-go/logx"
-	"github.com/xuzhuoxi/infra-go/osxu"
 	"github.com/xuzhuoxi/snail/conf"
 )
 
@@ -58,11 +57,11 @@ func (m *ModuleBase) updateLog() {
 		m.Logger = logx.DefaultLogger()
 		return
 	}
-	fileName, extName := osxu.SplitFileName(logName)
+	fileDir, fileBaseName, fileExtName := m.cfg.LogFileInfo()
 	newLog := logx.NewLogger()
 	newLog.SetPrefix("[" + m.cfg.Id + "] ")
 	newLog.SetConfig(logx.LogConfig{Type: logx.TypeConsole, Level: logx.LevelAll})
-	newLog.SetConfig(logx.LogConfig{Type: logx.TypeDailyFile, Level: logx.LevelAll, FileDir: m.cfg.LogDir(), FileName: fileName, FileExtName: "." + extName})
+	newLog.SetConfig(logx.LogConfig{Type: logx.TypeDailyFile, Level: logx.LevelAll, FileDir: fileDir, FileName: fileBaseName, FileExtName: "." + fileExtName})
 	m.Logger = newLog
 }
 

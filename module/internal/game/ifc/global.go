@@ -11,6 +11,7 @@ import (
 	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
 	"github.com/xuzhuoxi/infra-go/encodingx/jsonx"
 	"github.com/xuzhuoxi/infra-go/lang"
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 )
 
@@ -24,6 +25,8 @@ var (
 	PoolEncoder           = lang.NewObjectPoolSync()
 	PoolDecoder           = lang.NewObjectPoolSync()
 	PoolJsonCodingHandler = lang.NewObjectPoolSync()
+
+	LoggerExtension = logx.NewLogger()
 )
 
 func init() {

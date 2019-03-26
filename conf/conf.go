@@ -3,11 +3,20 @@ package conf
 import (
 	"encoding/json"
 	"flag"
+	"github.com/xuzhuoxi/infra-go/osxu"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 )
+
+func BasePath() string {
+	return filepath.Dir(os.Args[0])
+}
+
+func BaseLogPath() string {
+	return filepath.Dir(os.Args[0]) + "/log/"
+}
 
 type ServiceConf struct {
 	Name    string `json:"name"`
@@ -26,9 +35,12 @@ type ObjectConf struct {
 	conf *Conf
 }
 
-func (oc ObjectConf) LogDir() string {
-	basePath := filepath.Dir(os.Args[0])
-	return basePath + "/log/"
+func (oc ObjectConf) LogFileInfo() (fileDir string, fileBaseName string, fileExtName string) {
+	fullPath := BaseLogPath() + oc.Log
+	var fileName string
+	fileDir, fileName = osxu.SplitFilePath(fullPath)
+	fileBaseName, fileExtName = osxu.SplitFileName(fileName)
+	return
 }
 
 func (c ObjectConf) GetServiceConf(name string) (ServiceConf, bool) {

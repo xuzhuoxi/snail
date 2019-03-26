@@ -1,6 +1,7 @@
 package root
 
 import (
+	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
@@ -14,11 +15,19 @@ type ModuleGame struct {
 }
 
 func (m *ModuleGame) Init() {
+	m.initLoggerExtension()
 	config := m.GetConfig()
 	m.singleCase = m.newSingleCase()
 	m.status = NewGameStatus(config, m.singleCase)
 	m.server = NewGameServer(config, m.singleCase)
 	m.server.InitServer()
+}
+
+func (m *ModuleGame) initLoggerExtension() {
+	dir, baseName, extName := m.GetConfig().LogFileInfo()
+	ifc.LoggerExtension.SetPrefix("[" + "RespTime" + "] ")
+	ifc.LoggerExtension.SetConfig(logx.LogConfig{Type: logx.TypeConsole, Level: logx.LevelAll})
+	ifc.LoggerExtension.SetConfig(logx.LogConfig{Type: logx.TypeDailyFile, Level: logx.LevelInfo, FileDir: dir + "/extension/", FileName: baseName, FileExtName: "." + extName})
 }
 
 func (m *ModuleGame) Run() {

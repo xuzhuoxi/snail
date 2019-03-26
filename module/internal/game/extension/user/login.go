@@ -33,6 +33,7 @@ func (e *LoginExtension) OnRequest(resp extendx.IExtensionResponse, protoId stri
 	password := string(data)
 	if e.check(uid, password) {
 		ifc.AddressProxy.MapIdAddress(uid, resp.SenderAddress())
+		//time.Sleep(time.Second)
 		switch protoId {
 		case LoginId:
 			break

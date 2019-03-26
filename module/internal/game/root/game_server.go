@@ -14,9 +14,11 @@ import (
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
+	"github.com/xuzhuoxi/infra-go/timex"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
+	"time"
 )
 
 func NewGameServer(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *GameServer {
@@ -56,6 +58,12 @@ func (s *GameServer) StopServer() {
 	}
 	s.Servers = nil
 }
+
+//func (s *GameServer) ServerDetail() {
+//	name := s.config.Id
+//	linkCount := 0
+//	totalReqCount := 0
+//}
 
 //--------------------------------------------------
 
@@ -125,13 +133,25 @@ func (h *packHandler) onPack(msgData []byte, senderAddress string, other interfa
 	name, pid, uid, data := h.parsePackMessage(msgData)
 	extension := h.getProtocolExtension(name)
 	if nil == extension {
-		h.GetLogger().Warnln(fmt.Sprintf("Undefined Extension(%s)! Sender(%s)", name, uid))
+		ifc.LoggerExtension.Warnln(fmt.Sprintf("Undefined Extension(%s)! Sender(%s)", name, uid))
 		return false
 	}
 	if !extension.CheckProtocolId(pid) { //有效性检查
-		h.GetLogger().Warnln(fmt.Sprintf("Undefined ProtoId(%s) Send to Extension(%s)! Sender(%s)", pid, name, uid))
+		ifc.LoggerExtension.Warnln(fmt.Sprintf("Undefined ProtoId(%s) Send to Extension(%s)! Sender(%s)", pid, name, uid))
 		return false
 	}
+	func() { //记录时间状态
+		tn := time.Now().UnixNano()
+		defer func() {
+			un := time.Now().UnixNano() - tn
+			ifc.LoggerExtension.Infoln(name, pid, un, timex.FormatUnixMilli(un/1e6, "5.000ms")) //记录响应时间
+		}()
+		h.handleExtension(extension, senderAddress, name, pid, uid, data)
+	}()
+	return true
+}
+
+func (h *packHandler) handleExtension(extension ifc.IGameExtension, senderAddress string, name string, pid string, uid string, data [][]byte) {
 	if be, ok := extension.(protox.IBeforeRequestExtension); ok { //前置处理
 		be.BeforeRequest(pid)
 	}
@@ -148,7 +168,6 @@ func (h *packHandler) onPack(msgData []byte, senderAddress string, other interfa
 	if ae, ok := extension.(protox.IAfterRequestExtension); ok { //后置处理
 		ae.AfterRequest(pid)
 	}
-	return true
 }
 
 func (h *packHandler) handleRequestObject(response extendx.IExtensionResponse, extension protox.IOnObjectRequestExtension, pid string, uid string, data [][]byte) {
