@@ -6,19 +6,10 @@
 package root
 
 import (
-	"fmt"
-	"github.com/xuzhuoxi/infra-go/bytex"
-	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/eventx"
-	"github.com/xuzhuoxi/infra-go/extendx"
-	"github.com/xuzhuoxi/infra-go/extendx/protox"
-	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/infra-go/timex"
 	"github.com/xuzhuoxi/snail/conf"
-	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
-	"time"
 )
 
 func NewGameServer(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *GameServer {
@@ -29,66 +20,55 @@ func NewGameServer(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *Game
 }
 
 type GameServer struct {
+	eventx.EventDispatcher
 	config     conf.ObjectConf
 	SingleCase ifc.IGameSingleCase
-
-	Servers    []netx.ITCPServer
-	Containers []extension.ISnailExtensionContainer
+	GameSocks  []*GameSock
 }
 
 func (s *GameServer) InitServer() {
-}
-
-func (s *GameServer) StartServer() {
 	for _, service := range s.config.ServiceList {
 		conf, ok := s.config.GetServiceConf(service)
 		if !ok {
 			panic("Service[" + service + "] Undefined!")
 		}
-		s.startService(conf)
+		s.GameSocks = append(s.GameSocks, NewGameSock(conf, s.SingleCase))
+	}
+
+}
+
+func (s *GameServer) StartServer() {
+	for _, gs := range s.GameSocks {
+		gs.Server.AddEventListener(netx.ServerEventStart, s.onSockServerStart)
+		gs.Server.AddEventListener(netx.ServerEventStop, s.onSockServerStop)
+		go gs.SockRun()
 	}
 	ifc.AddressProxy.AddEventListener(netx.EventAddressRemoved, s.onAddressRemap)
 }
 
 func (s *GameServer) StopServer() {
 	ifc.AddressProxy.RemoveEventListener(netx.EventAddressRemoved, s.onAddressRemap)
-	for index := len(s.Servers) - 1; index >= 0; index-- {
-		s.Servers[index].RemoveEventListener(netx.ServerEventConnClosed, s.onConnClosed)
-		s.Servers[index].StopServer()
+	for index := len(s.GameSocks) - 1; index >= 0; index-- {
+		s.GameSocks[index].Server.RemoveEventListener(netx.ServerEventStop, s.onSockServerStop)
+		s.GameSocks[index].Server.RemoveEventListener(netx.ServerEventStart, s.onSockServerStart)
+		s.GameSocks[index].SockStop()
 	}
-	s.Servers = nil
+	s.GameSocks = nil
 }
 
-//func (s *GameServer) ServerDetail() {
-//	name := s.config.Id
-//	linkCount := 0
-//	totalReqCount := 0
-//}
-
-//--------------------------------------------------
-
-//tcp
-//json
-func (s *GameServer) startService(conf conf.ServiceConf) {
-	container := extension.NewISnailExtensionContainer()
-	registerExtension(container, s.SingleCase)
-	container.InitExtensions()
-	s.Containers = append(s.Containers, container)
-
-	server := netx.NewTCPServer()
-	s.Servers = append(s.Servers, server)
-
-	server.SetMax(100)
-	server.SetLogger(s.SingleCase.GetLogger())
-	server.GetPackHandler().AppendPackHandler(newPackHandler(s.SingleCase, server, container).onPack)
-	server.AddEventListener(netx.ServerEventConnClosed, s.onConnClosed)
-
-	go server.StartServer(netx.SockParams{Network: conf.Network, LocalAddress: conf.Addr})
+func (s *GameServer) onSockServerStart(evd *eventx.EventData) {
+	//fmt.Println(s.config.Id, "GameServer.onSockServerStart")
+	server := evd.CurrentTarget().(netx.ITCPServer)
+	gs, ok := s.getGameSock(server.GetName())
+	if ok {
+		s.DispatchEvent(netx.ServerEventStart, s, gs)
+	}
 }
 
-func (s *GameServer) onConnClosed(evd *eventx.EventData) {
-	address := evd.Data.(string)
-	ifc.AddressProxy.RemoveByAddress(address)
+func (s *GameServer) onSockServerStop(evd *eventx.EventData) {
+	//fmt.Println("GameServer.onSockServerStop")
+	server := evd.CurrentTarget().(netx.ITCPServer)
+	s.DispatchEvent(netx.ServerEventStop, s, server.GetName())
 }
 
 func (s *GameServer) onAddressRemap(evd *eventx.EventData) {
@@ -96,8 +76,8 @@ func (s *GameServer) onAddressRemap(evd *eventx.EventData) {
 	if "" == address {
 		return
 	}
-	for _, server := range s.Servers {
-		err, ok := server.CloseConnection(address)
+	for _, gameSock := range s.GameSocks {
+		err, ok := gameSock.Server.CloseConnection(address)
 		if ok {
 			if nil != err {
 				s.SingleCase.GetLogger().Warnln(err)
@@ -107,147 +87,11 @@ func (s *GameServer) onAddressRemap(evd *eventx.EventData) {
 	}
 }
 
-//---------------------------
-
-func newPackHandler(singleCase ifc.IGameSingleCase, server netx.ISockServer, container extension.ISnailExtensionContainer) *packHandler {
-	return &packHandler{
-		singleCase: singleCase,
-		server:     server,
-		container:  container,
-	}
-}
-
-type packHandler struct {
-	singleCase ifc.IGameSingleCase
-	container  extension.ISnailExtensionContainer
-	server     netx.ISockServer
-}
-
-func (h *packHandler) GetLogger() logx.ILogger {
-	return h.singleCase.GetLogger()
-}
-
-//消息处理入口，这里是并发方法
-//msgData非共享的，但在parsePackMessage后这部分数据会发生变化
-func (h *packHandler) onPack(msgData []byte, senderAddress string, other interface{}) bool {
-	name, pid, uid, data := h.parsePackMessage(msgData)
-	extension := h.getProtocolExtension(name)
-	if nil == extension {
-		ifc.LoggerExtension.Warnln(fmt.Sprintf("Undefined Extension(%s)! Sender(%s)", name, uid))
-		return false
-	}
-	if !extension.CheckProtocolId(pid) { //有效性检查
-		ifc.LoggerExtension.Warnln(fmt.Sprintf("Undefined ProtoId(%s) Send to Extension(%s)! Sender(%s)", pid, name, uid))
-		return false
-	}
-	func() { //记录时间状态
-		tn := time.Now().UnixNano()
-		defer func() {
-			un := time.Now().UnixNano() - tn
-			ifc.LoggerExtension.Infoln(name, pid, un, timex.FormatUnixMilli(un/1e6, "5.000ms")) //记录响应时间
-		}()
-		h.handleExtension(extension, senderAddress, name, pid, uid, data)
-	}()
-	return true
-}
-
-func (h *packHandler) handleExtension(extension ifc.IGameExtension, senderAddress string, name string, pid string, uid string, data [][]byte) {
-	if be, ok := extension.(protox.IBeforeRequestExtension); ok { //前置处理
-		be.BeforeRequest(pid)
-	}
-	//请求处理
-	response := &extendx.SockServerResponse{SockServer: h.server, Address: senderAddress, AddressProxy: ifc.AddressProxy}
-	switch ne := extension.(type) {
-	case protox.IOnNoneRequestExtension:
-		ne.OnRequest(response, pid, uid)
-	case protox.IOnBinaryRequestExtension:
-		h.handleRequestBinary(response, ne, pid, uid, data)
-	case protox.IOnObjectRequestExtension:
-		h.handleRequestObject(response, ne, pid, uid, data)
-	}
-	if ae, ok := extension.(protox.IAfterRequestExtension); ok { //后置处理
-		ae.AfterRequest(pid)
-	}
-}
-
-func (h *packHandler) handleRequestObject(response extendx.IExtensionResponse, extension protox.IOnObjectRequestExtension, pid string, uid string, data [][]byte) {
-	dataLn := len(data)
-	if 0 == dataLn {
-		extension.OnRequest(response, pid, uid, nil)
-		return
-	}
-	var list []interface{}
-	for _, bs := range data {
-		newData := extension.GetRequestData(pid)
-		ifc.HandleJsonCoding(func(codingHandler encodingx.ICodingHandler) {
-			codingHandler.HandleDecode(bs, &newData)
-		})
-		list = append(list, newData)
-	}
-	if dataLn > 1 {
-		if be, ok := extension.(protox.IBatchExtension); ok && be.Batch() {
-			extension.OnRequest(response, pid, uid, list[0], list[1:]...)
-		} else {
-			for _, val := range list {
-				extension.OnRequest(response, pid, uid, val)
-			}
+func (s *GameServer) getGameSock(name string) (*GameSock, bool) {
+	for _, gs := range s.GameSocks {
+		if name == gs.Server.GetName() {
+			return gs, true
 		}
-	} else {
-		extension.OnRequest(response, pid, uid, list[0])
 	}
-}
-
-func (h *packHandler) handleRequestBinary(response extendx.IExtensionResponse, extension protox.IOnBinaryRequestExtension, pid string, uid string, data [][]byte) {
-	dataLn := len(data)
-	if 0 == dataLn {
-		extension.OnRequest(response, pid, uid, nil)
-		return
-	}
-	if len(data) > 1 {
-		if be, ok := extension.(protox.IBatchExtension); ok && be.Batch() {
-			extension.OnRequest(response, pid, uid, data[0], data[1:]...)
-		} else {
-			for _, bs := range data {
-				extension.OnRequest(response, pid, uid, bs)
-			}
-		}
-	} else {
-		extension.OnRequest(response, pid, uid, data[0])
-	}
-}
-
-//block0 : eName utf8
-//block1 : pid	utf8
-//block2 : uid	utf8
-//[n]其它信息
-//这里为并发区域，但没有共享资源，可是就是出并发问题
-func (h *packHandler) parsePackMessage(msgBytes []byte) (name string, pid string, uid string, data [][]byte) {
-	index := 0
-	ifc.HandleBuffToData(func(buffToData bytex.IBuffToData) {
-		buffToData.WriteBytes(msgBytes)
-		name = string(buffToData.ReadData())
-		pid = string(buffToData.ReadData())
-		uid = string(buffToData.ReadData())
-		if buffToData.Len() > 0 {
-			for buffToData.Len() > 0 {
-				n, d := buffToData.ReadDataTo(msgBytes[index:]) //由于msgBytes前部分数据已经处理完成，可以利用这部分空间
-				//h.singleCase.GetLogger().Traceln("parsePackMessage", uid, d)
-				if nil == d {
-					//h.singleCase.GetLogger().Warnln("data is nil")
-					break
-				}
-				data = append(data, d)
-				index += n
-			}
-		}
-	})
-	return name, pid, uid, data
-}
-
-func (h *packHandler) getProtocolExtension(pid string) ifc.IGameExtension {
-	e := h.container.GetExtension(pid)
-	if pe, ok := e.(ifc.IGameExtension); ok {
-		return pe
-	}
-	return nil
+	return nil, false
 }

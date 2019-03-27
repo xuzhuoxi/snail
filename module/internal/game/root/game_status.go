@@ -1,47 +1,38 @@
 package root
 
 import (
+	"fmt"
 	"github.com/xuzhuoxi/infra-go/encodingx"
+	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
+	"sync"
 	"time"
 )
 
-func NewGameStatus(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *GameStatus {
+func NewGameStatus(config conf.ObjectConf, singleCase ifc.IGameSingleCase, server *GameServer) *GameStatus {
 	gameId := config.Id
 	return &GameStatus{
-		gameId:       gameId,
-		config:       config,
-		singleCase:   singleCase,
-		state:        imodule.NewServiceState(gameId, imodule.DefaultStatsInterval),
-		rpcRemoteMap: make(map[string]netx.IRPCClient)}
+		gameId:        gameId,
+		config:        config,
+		singleCase:    singleCase,
+		server:        server,
+		linkingServer: make(map[string]struct{}),
+		rpcRemoteMap:  make(map[string]netx.IRPCClient)}
 }
 
 type GameStatus struct {
-	gameId       string
-	config       conf.ObjectConf
-	singleCase   ifc.IGameSingleCase
-	state        *imodule.ServiceStateDetail
-	rpcRemoteMap map[string]netx.IRPCClient
-}
+	gameId     string
+	config     conf.ObjectConf
+	singleCase ifc.IGameSingleCase
 
-func (s *GameStatus) GetPassTime() int64 {
-	return s.state.GetPassNano() / int64(time.Second)
-}
-
-func (s *GameStatus) GetStatePriority() float64 {
-	return s.state.StatsWeight()
-}
-
-func (s *GameStatus) DetailState() *imodule.ServiceStateDetail {
-	return s.state
-}
-
-func (s *GameStatus) ToSimpleState() imodule.ServiceState {
-	return imodule.ServiceState{Name: s.state.Name, Weight: s.state.StatsWeight()}
+	server        *GameServer
+	linkingServer map[string]struct{}
+	rpcRemoteMap  map[string]netx.IRPCClient
+	remoteMu      sync.RWMutex
 }
 
 func (s *GameStatus) logger() logx.ILogger {
@@ -50,125 +41,138 @@ func (s *GameStatus) logger() logx.ILogger {
 
 //---------------------------------------------
 
-func (s *GameStatus) Start() {
-	s.state.Start()
-	go s.CheckRPC()
+func (s *GameStatus) StartNotify() {
+	s.server.AddEventListener(netx.ServerEventStart, s.onGameSockStart)
+	s.server.AddEventListener(netx.ServerEventStop, s.onGameSockStop)
+	//go s.CheckRPC()
 }
 
-func (s *GameStatus) CheckRPC() {
-Conn:
-	//fmt.Println(m.GetConfig().Name, ": start checkConn")
-	s.checkAndConnRemotes()
-	time.Sleep(time.Duration(s.state.StatsInterval()))
-	goto Conn
+func (s *GameStatus) StopNotify() {
+	s.server.RemoveEventListener(netx.ServerEventStop, s.onGameSockStop)
+	s.server.RemoveEventListener(netx.ServerEventStart, s.onGameSockStart)
+	//go s.CheckRPC()
 }
 
-func (s *GameStatus) checkAndConnRemotes() {
-	remotes := s.config.Remotes
-	for _, name := range remotes {
-		s.checkAndConnRemote(name)
-	}
+func (s *GameStatus) onGameSockStart(evd *eventx.EventData) {
+	//fmt.Println("GameStatus.onGameSockStart")
+	gameSock := evd.Data.(*GameSock)
+
+	s.remoteMu.Lock()
+	s.linkingServer[gameSock.Server.GetName()] = struct{}{}
+	s.remoteMu.Unlock()
+
+	s.notifyConnected(gameSock)
 }
 
-func (s *GameStatus) checkAndConnRemote(toName string) {
-	service, ok := s.config.GetServiceConf(toName)
-	if !ok {
-		s.logger().Fatalln(s.gameId, ": Remotes Error At:", toName)
-		return
-	}
-	client, ok2 := s.rpcRemoteMap[toName]
-	if !ok2 || !client.IsConnected() {
-		s.conn2Service(toName, service.Network, service.Addr)
-	}
+func (s *GameStatus) onGameSockStop(evd *eventx.EventData) {
+	//fmt.Println("GameStatus.onGameSockStop")
+	gameSockName := evd.Data.(string)
+
+	s.remoteMu.Lock()
+	delete(s.linkingServer, gameSockName)
+	s.remoteMu.Unlock()
+
+	s.notifyDisConnected(gameSockName)
 }
 
-func (s *GameStatus) conn2Service(toName string, network string, addr string) {
-	client := netx.NewRPCClient(netx.RpcNetworkTCP)
-	err := client.Dial(addr)
-	if nil != err {
-		return
-	}
-	s.logger().Infoln(s.gameId, "Connected to", toName, "(", addr, ") with RPC(", network, ")!")
-	s.rpcRemoteMap[toName] = client
-	s.notifyConnected(toName)
-	s.notifyState(toName)
+//-------------------------------
+
+func (s *GameStatus) notifyConnected(gs *GameSock) {
+	ifc.HandleBuffEncode(func(encoder encodingx.IBuffEncoder) {
+		var data [][]byte //0:ModGame,[]
+
+		encoder.EncodeDataToBuff(imodule.ModGame)
+		data = append(data, encoder.ReadBytes()) //[0]
+
+		link := gs.Conf                        //conf.ServiceConf
+		weight := gs.StateDetail.StatsWeight() //float64
+		encoder.EncodeDataToBuff(link, weight)
+		data = append(data, encoder.ReadBytes()) //[n]
+
+		s.doNotifyRoutes(imodule.CmdRoute_OnConnected, data)
+	})
+
+	go func(gs *GameSock) {
+	ReCheck:
+		time.Sleep(ifc.GameNotifyRouteInterval)
+		s.remoteMu.Lock()
+		_, ok := s.linkingServer[gs.Server.GetName()]
+		s.remoteMu.Unlock()
+		if ok {
+			s.notifyState(gs)
+			goto ReCheck
+		}
+	}(gs)
 }
 
-func (s *GameStatus) notifyRemotes(f func(to string)) {
+func (s *GameStatus) notifyDisConnected(gameSockName string) {
+	s.doNotifyRoutes(imodule.CmdRoute_OnDisconnected, [][]byte{[]byte(gameSockName)})
+}
+
+func (s *GameStatus) notifyState(gs *GameSock) {
+	ifc.HandleBuffEncode(func(encoder encodingx.IBuffEncoder) {
+		var data [][]byte
+		state := *imodule.NewServiceState(gs.Conf.Name, gs.StateDetail.StatsWeight())
+		encoder.EncodeDataToBuff(state)
+		data = append(data, encoder.ReadBytes())
+		s.doNotifyRoutes(imodule.CmdRoute_UpdateState, data)
+	})
+}
+
+//-------------------------------
+
+func (s *GameStatus) doNotifyRoutes(Cmd string, data [][]byte) {
+	//fmt.Println("GameStatus.doNotifyRoutes", Cmd, data)
 	remotes := s.config.Remotes
 	for _, remoteName := range remotes {
-		client, ok := s.rpcRemoteMap[remoteName]
-		if ok && client.IsConnected() {
-			f(remoteName)
+		client, ok, _ := s.getRemoteClient(remoteName)
+		if !ok || !client.IsConnected() {
+			continue
 		}
+		s.doNotifyRoute(remoteName, Cmd, data)
 	}
 }
 
-func (s *GameStatus) notifyConnected(toName string) {
-	toClient := s.rpcRemoteMap[toName]
-	config := s.config
-
-	module := imodule.ModGame
-	link, _ := config.GetServiceConf(config.ServiceList[0])
-	state := imodule.ServiceState{Name: s.gameId, Weight: s.GetStatePriority()}
-
-	//s.encoder().EncodeDataToBuff(module)
-	//dataM := s.encoder().ReadBytes()
-	//s.encoder().EncodeDataToBuff(link)
-	//dataL := s.encoder().ReadBytes()
-	//s.encoder().EncodeDataToBuff(state)
-	//dataS := s.encoder().ReadBytes()
-	//
-	//s.encoder().EncodeDataToBuff(module)
-	//dataM2 := s.encoder().ReadBytes()
-	//s.encoder().EncodeDataToBuff(link)
-	//dataL2 := s.encoder().ReadBytes()
-	//s.encoder().EncodeDataToBuff(state)
-	//dataS2 := s.encoder().ReadBytes()
-	//
-	//s.logger().Debugln(11, dataM)
-	//s.logger().Debugln(12, dataM2)
-	//s.logger().Debugln(21, dataL)
-	//s.logger().Debugln(22, dataL2)
-	//s.logger().Debugln(31, dataS)
-	//s.logger().Debugln(32, dataS2)
-	//args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnConnected, Data: append(append(dataM, dataL...), dataS...)}
-
-	var data []byte
-	ifc.HandleEncode(func(encoder encodingx.IBuffEncoder) {
-		encoder.EncodeDataToBuff(module, link, state)
-		data = encoder.ReadBytes()
-	})
-
-	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnConnected, Data: data}
-	//s.logger().Debugln("GameStatus.Debug.notifyConnected:", *args)
-	//s.logger().Debugln("GameStatus.Debug.notifyConnected1:", data)
-	//s.logger().Debugln("GameStatus.Debug.notifyConnected2:", data2)
-
+func (s *GameStatus) doNotifyRoute(remoteName string, Cmd string, data [][]byte) {
+	client := s.rpcRemoteMap[remoteName]
+	args := &imodule.RPCArgs{From: s.gameId, Cmd: Cmd, Data: data}
 	reply := &imodule.RPCReply{}
-	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
+	err := client.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
+	if nil != err {
+		s.remoteMu.Lock()
+		defer s.remoteMu.Unlock()
+		s.cacheRemoteClient(remoteName, nil)
+	}
 }
 
-func (s *GameStatus) notifyDisConnected(toName string) {
-	toClient := s.rpcRemoteMap[toName]
-	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_OnDisconnected}
-	reply := &imodule.RPCReply{}
-	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
+//-----------------------------
+
+func (s *GameStatus) getRemoteClient(remoteName string) (client netx.IRPCClient, ok bool, isNew bool) {
+	s.remoteMu.RLock()
+	defer s.remoteMu.RUnlock()
+	client, ok = s.rpcRemoteMap[remoteName]
+	if ok {
+		return
+	}
+	service, ok2 := s.config.GetServiceConf(remoteName)
+	if !ok2 {
+		s.logger().Fatalln(s.gameId, ": Remotes Error At:", remoteName)
+		return nil, false, false
+	}
+	client = netx.NewRPCClient(netx.RpcNetworkTCP)
+	err := client.Dial(service.Addr)
+	if nil != err {
+		return nil, false, false
+	}
+	s.logger().Infoln(fmt.Sprintf("Connected to %s(%s) with RPC(%s)", remoteName, service.Addr, service.Network))
+	s.cacheRemoteClient(remoteName, client)
+	return client, true, true
 }
 
-func (s *GameStatus) notifyState(toName string) {
-	toClient := s.rpcRemoteMap[toName]
-
-	state := s.ToSimpleState()
-	var data []byte
-	ifc.HandleEncode(func(encoder encodingx.IBuffEncoder) {
-		encoder.EncodeDataToBuff(state)
-		data = encoder.ReadBytes()
-	})
-
-	args := &imodule.RPCArgs{From: s.gameId, Cmd: imodule.CmdRoute_UpdateState, Data: data}
-	//s.logger().Debugln("GameStatus.Debug.notifyState:", args.Data, state)
-
-	reply := &imodule.RPCReply{}
-	toClient.Call(imodule.ServiceMethod_OnRPCCall, args, reply)
+func (s *GameStatus) cacheRemoteClient(remoteName string, client netx.IRPCClient) {
+	if nil == client {
+		delete(s.rpcRemoteMap, remoteName)
+	} else {
+		s.rpcRemoteMap[remoteName] = client
+	}
 }

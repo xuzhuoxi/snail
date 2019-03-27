@@ -16,12 +16,17 @@ import (
 const Timeout = int64(time.Minute)
 
 type server struct {
-	Id         string
+	ModuleId   string
 	ModuleName imodule.ModuleName
-	Link       conf.ServiceConf
-	State      imodule.ServiceState
+
+	ServiceConf  conf.ServiceConf
+	ServiceState imodule.ServiceState
 
 	lastTimestamp int64
+}
+
+func (s *server) ServerId() string {
+	return s.ServiceConf.Name
 }
 
 func (s *server) Timeout() bool {
@@ -30,47 +35,51 @@ func (s *server) Timeout() bool {
 
 //-----------------------------
 
-type serverlist []*server
+type serverList []*server
 
-func (c serverlist) Len() int {
+func (c serverList) Len() int {
 	return len(c)
 }
 
-func (c serverlist) Less(i, j int) bool {
-	return c[i].State.Weight < c[j].State.Weight
+func (c serverList) Less(i, j int) bool {
+	return c[i].ServiceState.Weight < c[j].ServiceState.Weight
 }
 
-func (c serverlist) Swap(i, j int) {
+func (c serverList) Swap(i, j int) {
 	c[i], c[j] = c[j], c[i]
 }
 
 //-----------------------------
 
 type iCollection interface {
-	InitServer(server)
-	HasServer(id string) bool
+	AddServer(server)
+	RemoveServer(id string) *server
 	UpdateServerState(state imodule.ServiceState)
+
+	CheckServerById(id string) bool
+	GetServerById(id string) *server
+	GetServersByModuleId(id string) []*server
+	GetServersByModule(moduleName imodule.ModuleName) []*server
+
 	ClearTimeout() []string
-	GetServer(id string) *server
-	GetServers(moduleName imodule.ModuleName) []*server
 }
 
 type collection struct {
-	servers serverlist
+	servers serverList
 	maps    map[string]*server
 	mu      sync.Mutex
 }
 
-func (c *collection) InitServer(server server) {
+func (c *collection) AddServer(server server) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.addServer(server)
+	c.addServer(&server)
 }
 
-func (c *collection) HasServer(id string) bool {
+func (c *collection) RemoveServer(id string) *server {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.hasServer(id)
+	return c.removeServerById(id)
 }
 
 func (c *collection) UpdateServerState(state imodule.ServiceState) {
@@ -78,24 +87,18 @@ func (c *collection) UpdateServerState(state imodule.ServiceState) {
 	defer c.mu.Unlock()
 	name := state.Name
 	if c.hasServer(name) {
-		c.maps[name].State = state
+		c.maps[name].ServiceState = state
 		c.maps[name].lastTimestamp = time.Now().UnixNano()
 	}
 }
 
-func (c *collection) ClearTimeout() []string {
+func (c *collection) CheckServerById(id string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var rs []string
-	for index := len(c.servers) - 1; index >= 0; index-- {
-		if c.servers[index].Timeout() {
-			rs = append(rs, c.removeServer(index).Id)
-		}
-	}
-	return rs
+	return c.hasServer(id)
 }
 
-func (c *collection) GetServer(id string) *server {
+func (c *collection) GetServerById(id string) *server {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	val, ok := c.maps[id]
@@ -105,7 +108,19 @@ func (c *collection) GetServer(id string) *server {
 	return nil
 }
 
-func (c *collection) GetServers(moduleName imodule.ModuleName) []*server {
+func (c *collection) GetServersByModuleId(id string) []*server {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var rs []*server
+	for _, server := range c.servers {
+		if server.ModuleId == id {
+			rs = append(rs, copyServer(server))
+		}
+	}
+	return rs
+}
+
+func (c *collection) GetServersByModule(moduleName imodule.ModuleName) []*server {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var rs []*server
@@ -117,31 +132,56 @@ func (c *collection) GetServers(moduleName imodule.ModuleName) []*server {
 	return rs
 }
 
+func (c *collection) ClearTimeout() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var rs []string
+	for index := len(c.servers) - 1; index >= 0; index-- {
+		if c.servers[index].Timeout() {
+			rs = append(rs, c.removeServerByIndex(index).ServerId())
+		}
+	}
+	return rs
+}
+
+//---------------------------
+
 func (c *collection) hasServer(id string) bool {
 	_, ok := c.maps[id]
 	return ok
 }
 
-func (c *collection) addServer(server server) {
-	if c.hasServer(server.Id) {
+func (c *collection) addServer(server *server) {
+	if c.hasServer(server.ServerId()) {
 		return
 	}
-	r := &server
-	c.servers = append(c.servers, r)
-	c.maps[server.Id] = r
+	c.servers = append(c.servers, server)
+	c.maps[server.ServerId()] = server
 }
 
-func (c *collection) removeServer(index int) *server {
-	if index < 0 || index >= len(c.servers) {
+func (c *collection) removeServerById(id string) *server {
+	for index := 0; index < c.servers.Len(); index-- {
+		if id == c.servers[index].ServerId() {
+			rs := c.servers[index]
+			c.servers = append(c.servers[:index], c.servers[index+1:]...)
+			delete(c.maps, id)
+			return rs
+		}
+	}
+	return nil
+}
+
+func (c *collection) removeServerByIndex(index int) *server {
+	if index < 0 || index >= c.servers.Len() {
 		return nil
 	}
 	rs := c.servers[index]
 	c.servers = append(c.servers[:index], c.servers[index+1:]...)
-	delete(c.maps, rs.Id)
+	delete(c.maps, rs.ServerId())
 	return rs
 }
 
-func (c *collection) sortServers(servers serverlist) []*server {
+func (c *collection) sortServers(servers serverList) []*server {
 	sort.Sort(servers)
 	return servers
 }

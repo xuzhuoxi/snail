@@ -18,9 +18,10 @@ func (m *ModuleGame) Init() {
 	m.initLoggerExtension()
 	config := m.GetConfig()
 	m.singleCase = m.newSingleCase()
-	m.status = NewGameStatus(config, m.singleCase)
 	m.server = NewGameServer(config, m.singleCase)
 	m.server.InitServer()
+
+	m.status = NewGameStatus(config, m.singleCase, m.server)
 }
 
 func (m *ModuleGame) initLoggerExtension() {
@@ -31,8 +32,8 @@ func (m *ModuleGame) initLoggerExtension() {
 }
 
 func (m *ModuleGame) Run() {
+	m.status.StartNotify()
 	m.server.StartServer()
-	m.status.Start()
 }
 
 func (m *ModuleGame) Save() {
@@ -42,6 +43,8 @@ func (m *ModuleGame) OnDestroy() {
 }
 
 func (m *ModuleGame) Destroy() {
+	m.server.StopServer()
+	m.status.StopNotify()
 }
 
 func (m *ModuleGame) newSingleCase() ifc.IGameSingleCase {

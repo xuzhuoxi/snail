@@ -13,6 +13,8 @@ import (
 	"github.com/xuzhuoxi/infra-go/lang"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
+	"github.com/xuzhuoxi/snail/module/imodule"
+	"time"
 )
 
 var (
@@ -22,11 +24,15 @@ var (
 	//以下为对象池，全game共享
 	PoolBuffToData        = bytex.NewPoolBuffToData()
 	PoolBuffToBlock       = bytex.NewPoolBuffToBlock()
-	PoolEncoder           = lang.NewObjectPoolSync()
-	PoolDecoder           = lang.NewObjectPoolSync()
+	PoolBuffEncoder       = lang.NewObjectPoolSync()
+	PoolBuffDecoder       = lang.NewObjectPoolSync()
 	PoolJsonCodingHandler = lang.NewObjectPoolSync()
 
 	LoggerExtension = logx.NewLogger()
+)
+
+const (
+	GameNotifyRouteInterval = time.Duration(imodule.DefaultStatsInterval)
 )
 
 func init() {
@@ -36,7 +42,7 @@ func init() {
 	PoolBuffToBlock.Register(func() bytex.IBuffToBlock {
 		return bytex.NewBuffToBlock(DataBlockHandler)
 	})
-	PoolEncoder.Register(func() interface{} {
+	PoolBuffEncoder.Register(func() interface{} {
 		return gobx.NewGobBuffEncoder(DataBlockHandler)
 	}, func(instance interface{}) bool {
 		if nil == instance {
@@ -47,7 +53,7 @@ func init() {
 		}
 		return false
 	})
-	PoolDecoder.Register(func() interface{} {
+	PoolBuffDecoder.Register(func() interface{} {
 		return gobx.NewGobBuffDecoder(DataBlockHandler)
 	}, func(instance interface{}) bool {
 		if nil == instance {
@@ -71,15 +77,15 @@ func init() {
 	})
 }
 
-func HandleEncode(handler func(encodingx.IBuffEncoder)) {
+func HandleBuffEncode(handler func(encodingx.IBuffEncoder)) {
 	encoder := getBuffEncoder()
-	defer PoolEncoder.Recycle(encoder)
+	defer PoolBuffEncoder.Recycle(encoder)
 	handler(encoder)
 }
 
-func HandleDecode(handler func(encodingx.IBuffDecoder)) {
+func HandleBuffDecode(handler func(encodingx.IBuffDecoder)) {
 	decoder := getBuffDecoder()
-	defer PoolDecoder.Recycle(decoder)
+	defer PoolBuffDecoder.Recycle(decoder)
 	handler(decoder)
 }
 
@@ -104,13 +110,13 @@ func HandleJsonCoding(handler func(codingHandler encodingx.ICodingHandler)) {
 //---------------------------
 
 func getBuffEncoder() encodingx.IBuffEncoder {
-	rs := PoolEncoder.GetInstance().(encodingx.IBuffEncoder)
+	rs := PoolBuffEncoder.GetInstance().(encodingx.IBuffEncoder)
 	rs.Reset()
 	return rs
 }
 
 func getBuffDecoder() encodingx.IBuffDecoder {
-	rs := PoolDecoder.GetInstance().(encodingx.IBuffDecoder)
+	rs := PoolBuffDecoder.GetInstance().(encodingx.IBuffDecoder)
 	rs.Reset()
 	return rs
 }

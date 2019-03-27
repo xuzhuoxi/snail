@@ -1,13 +1,12 @@
 package impl
 
 import (
-	"github.com/xuzhuoxi/infra-go/bytex"
 	"github.com/xuzhuoxi/infra-go/encodingx"
-	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
+	"github.com/xuzhuoxi/snail/module/internal/route/ifc"
 	"net/http"
 	"strconv"
 	"sync"
@@ -21,16 +20,11 @@ type ModuleRoute struct {
 	httpServer netx.IHttpServer
 	rpcServer  netx.IRPCServer
 
-	buffEncoder encodingx.IBuffEncoder
-	buffDecoder encodingx.IBuffDecoder
-
 	mu sync.Mutex
 }
 
 func (m *ModuleRoute) Init() {
 	m.gameCollection = newCollection()
-	m.buffEncoder = gobx.NewGobBuffEncoder(bytex.NewDefaultDataBlockHandler())
-	m.buffDecoder = gobx.NewGobBuffDecoder(bytex.NewDefaultDataBlockHandler())
 }
 
 func (m *ModuleRoute) Run() {
@@ -93,44 +87,62 @@ func (m *ModuleRoute) runForeignServices() {
 }
 
 func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
-	//name := args.From
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	decoder := m.buffDecoder
-	//decoder := encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
-	decoder.WriteBytes(args.Data)
-	var module imodule.ModuleName
-	var link conf.ServiceConf
-	var state imodule.ServiceState
-	decoder.DecodeDataFromBuff(&module, &link, &state)
-
-	server := server{Id: args.From, ModuleName: module, Link: link, State: state, lastTimestamp: time.Now().UnixNano()}
-	m.gameCollection.InitServer(server)
-	m.Logger.Infoln("ModuleRoute.onConnected:", args.From, server)
+	//m.Logger.Debugln("onConnected:", args.From, args.Data)
+	var servers []server
+	ifc.HandleBuffDecode(func(decoder encodingx.IBuffDecoder) {
+		for _, bs := range args.Data {
+			decoder.WriteBytes(bs)
+		}
+		var module imodule.ModuleName
+		decoder.DecodeDataFromBuff(&module)
+		for index := 1; index < len(args.Data); index++ {
+			var conf conf.ServiceConf
+			var weight float64
+			decoder.DecodeDataFromBuff(&conf, &weight)
+			server := server{ModuleId: args.From, ModuleName: module, ServiceConf: conf, ServiceState: imodule.ServiceState{Name: conf.Name, Weight: weight}, lastTimestamp: time.Now().UnixNano()}
+			servers = append(servers, server)
+			m.gameCollection.AddServer(server)
+		}
+	})
+	m.Logger.Infoln("ModuleRoute.onConnected:", args.From, servers)
 	return nil
 }
 
 func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
-	name := args.From
-	m.Logger.Infoln("ModuleRoute.onDisconnected:", name)
+	//name := args.From
+	data := args.Data
+	var serverNames []string
+	for _, d := range data {
+		serverName := string(d)
+		if s := m.gameCollection.RemoveServer(serverName); nil != s {
+			serverNames = append(serverNames, serverName)
+		}
+	}
+	m.Logger.Infoln("ModuleRoute.onDisconnected:", serverNames)
 	return nil
 }
 
 func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	decoder := m.buffDecoder
-	//decoder := encodingx.NewGobBuffDecoder(DefaultDataBlockHandler)
-	decoder.WriteBytes(args.Data)
-	var state imodule.ServiceState
-	decoder.DecodeDataFromBuff(&state)
-
-	m.gameCollection.UpdateServerState(state)
-	m.Logger.Infoln("ModuleRoute.onUpdateState:", args.From, state)
+	var states []imodule.ServiceState
+	ifc.HandleBuffDecode(func(decoder encodingx.IBuffDecoder) {
+		for index := 0; index < len(args.Data); index++ {
+			decoder.Reset()
+			decoder.WriteBytes(args.Data[index])
+			var state imodule.ServiceState
+			decoder.DecodeDataFromBuff(&state)
+			states = append(states, state)
+			m.gameCollection.UpdateServerState(state)
+		}
+	})
+	m.Logger.Infoln("ModuleRoute.onUpdateState:", args.From, states)
 	return nil
 }
 
 func (m *ModuleRoute) onQueryRoute(w http.ResponseWriter, r *http.Request) {
-	m.Logger.Infoln(":onQueryRoute:", len(m.gameCollection.GetServers(imodule.ModGame)))
-	w.Write([]byte(strconv.Itoa(len(m.gameCollection.GetServers(imodule.ModGame)))))
+	m.Logger.Infoln(":onQueryRoute:", len(m.gameCollection.GetServersByModule(imodule.ModGame)))
+	w.Write([]byte(strconv.Itoa(len(m.gameCollection.GetServersByModule(imodule.ModGame)))))
 }

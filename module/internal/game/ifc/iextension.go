@@ -8,3 +8,5 @@ package ifc
 import "github.com/xuzhuoxi/snail/engine/extension"
 
 type IGameExtension = extension.ISnailExtension
+
+type IGameExtensionContainer = extension.ISnailExtensionContainer

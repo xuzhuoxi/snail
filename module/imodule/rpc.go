@@ -15,13 +15,13 @@ const (
 type RPCArgs struct {
 	From string
 	Cmd  string
-	Data []byte
+	Data [][]byte
 }
 
 type RPCReply struct {
 	To   string
 	Cmd  string
-	Data []byte
+	Data [][]byte
 }
 
 func MapRPCFunction(handler *RPCHandler, key string, f func(args *RPCArgs, reply *RPCReply) error) {
