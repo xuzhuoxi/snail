@@ -27,7 +27,7 @@ func (m *ModuleGame) Init() {
 func (m *ModuleGame) initLoggerExtension() {
 	dir, baseName, extName := m.GetConfig().LogFileInfo()
 	ifc.LoggerExtension.SetPrefix("[" + "RespTime" + "] ")
-	ifc.LoggerExtension.SetConfig(logx.LogConfig{Type: logx.TypeConsole, Level: logx.LevelAll})
+	//ifc.LoggerExtension.SetConfig(logx.LogConfig{Type: logx.TypeConsole, Level: logx.LevelAll})
 	ifc.LoggerExtension.SetConfig(logx.LogConfig{Type: logx.TypeDailyFile, Level: logx.LevelInfo, FileDir: dir + "/extension/", FileName: baseName, FileExtName: "." + extName})
 }
 

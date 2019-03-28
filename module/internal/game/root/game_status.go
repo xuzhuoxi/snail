@@ -84,8 +84,8 @@ func (s *GameStatus) notifyConnected(gs *GameSock) {
 		encoder.EncodeDataToBuff(imodule.ModGame)
 		data = append(data, encoder.ReadBytes()) //[0]
 
-		link := gs.Conf                        //conf.ServiceConf
-		weight := gs.StateDetail.StatsWeight() //float64
+		link := gs.Conf                            //conf.SockConf
+		weight := gs.SockStateDetail.StatsWeight() //float64
 		encoder.EncodeDataToBuff(link, weight)
 		data = append(data, encoder.ReadBytes()) //[n]
 
@@ -112,7 +112,7 @@ func (s *GameStatus) notifyDisConnected(gameSockName string) {
 func (s *GameStatus) notifyState(gs *GameSock) {
 	ifc.HandleBuffEncode(func(encoder encodingx.IBuffEncoder) {
 		var data [][]byte
-		state := *imodule.NewServiceState(gs.Conf.Name, gs.StateDetail.StatsWeight())
+		state := *imodule.NewSockState(gs.Conf.Name, gs.SockStateDetail.StatsWeight())
 		encoder.EncodeDataToBuff(state)
 		data = append(data, encoder.ReadBytes())
 		s.doNotifyRoutes(imodule.CmdRoute_UpdateState, data)

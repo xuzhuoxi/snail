@@ -9,6 +9,7 @@ import (
 	"github.com/xuzhuoxi/infra-go/extendx"
 	"github.com/xuzhuoxi/snail/module/internal/game/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
+	"time"
 )
 
 const (
@@ -33,7 +34,7 @@ func (e *LoginExtension) OnRequest(resp extendx.IExtensionResponse, protoId stri
 	password := string(data)
 	if e.check(uid, password) {
 		ifc.AddressProxy.MapIdAddress(uid, resp.SenderAddress())
-		//time.Sleep(time.Second)
+		time.Sleep(time.Millisecond * 20)
 		switch protoId {
 		case LoginId:
 			break

@@ -27,7 +27,7 @@ type GameServer struct {
 }
 
 func (s *GameServer) InitServer() {
-	for _, service := range s.config.ServiceList {
+	for _, service := range s.config.SockList {
 		conf, ok := s.config.GetServiceConf(service)
 		if !ok {
 			panic("Service[" + service + "] Undefined!")

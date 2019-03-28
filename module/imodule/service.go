@@ -6,60 +6,77 @@
 package imodule
 
 import (
+	"runtime"
 	"sync"
 	"time"
 )
 
-//统计间隔
-const DefaultStatsInterval = int64(5 * time.Minute)
-
-type IServiceState interface {
-	GetName() string
-	GetWeight() float64
+type ISockState interface {
+	GetSockName() string
+	GetSockWeight() float64
 }
 
-type IServiceStateDetail interface {
+type ISockStateDetail interface {
 	//运行时间
 	GetPassNano() int64
 
 	//当前统计的服务权重(连接数*统计时间/统计响应时间)
 	//越大代表压力越大
 	StatsWeight() float64
-	//统计时间段的请求密度(次数/秒)
-	StatsReqDensity() int
-	//统计时间段的响应密度(统计响应时间/统计时间)
-	StatsRespDensity() float64
+
+	//响应系数(响应总时间 / (统计总时间 * 逻辑cpu数)),
+	//注意：结果正常设置下为[0,1]
+	RespCoefficient() float64
+	//平均响应时间(响应总时间/响应次数)
+	RespAvgTime() float64
+	//请求密度(次数/秒)
+	ReqDensityTime() int
+
+	//区间响应系数(区间响应总时间 / (区间统计总时间 * 逻辑cpu数)),
+	// 注意：结果正常设置下为[0,1]
+	StatsRespCoefficient() float64
+	//区间平均响应时间(响应总时间/响应次数)
+	StatsRespAvgTime() float64
+	//区间时间请求密度(次数/秒)
+	StatsReqDensityTime() int
 }
 
-func NewServiceState(name string, weight float64) *ServiceState {
-	return &ServiceState{Name: name, Weight: weight}
+func NewSockState(name string, weight float64) *SockState {
+	return &SockState{SockName: name, SockWeight: weight}
 }
 
-func NewServiceStateDetail(name string, statsInterval int64) *ServiceStateDetail {
-	return &ServiceStateDetail{Name: name, StatsInterval: statsInterval}
+func NewSockStateDetail(name string, statsInterval int64) *SockStateDetail {
+	return &SockStateDetail{SockName: name, StatsInterval: statsInterval}
 }
 
 //------------------------------
 
-type ServiceState struct {
+type SockState struct {
 	//名称
-	Name string
+	SockName string
 	//压力
-	Weight float64
+	SockWeight float64
+	////响应系数(响应总时间 / (统计总时间 * 逻辑cpu数)),
+	////注意：结果正常设置下为[0,1]
+	//RespCoefficient float64
+	////平均响应时间(响应总时间/响应次数)
+	//RespAvgTime float64
+	////请求密度(次数/秒)
+	//ReqDensityTime int
 }
 
-func (ss *ServiceState) GetName() string {
-	return ss.Name
+func (ss *SockState) GetSockName() string {
+	return ss.SockName
 }
 
-func (ss *ServiceState) GetWeight() float64 {
-	return ss.Weight
+func (ss *SockState) GetSockWeight() float64 {
+	return ss.SockWeight
 }
 
 //------------------------------
 
-type ServiceStateDetail struct {
-	Name string
+type SockStateDetail struct {
+	SockName string
 	//启动时间戳(纳秒)
 	StartTimestamp int64
 	//最大连接数
@@ -87,37 +104,58 @@ type ServiceStateDetail struct {
 }
 
 //启动时间
-func (s ServiceStateDetail) GetPassNano() int64 {
-	return s.getStatsPass()
+func (s SockStateDetail) GetPassNano() int64 {
+	return time.Now().UnixNano() - s.StartTimestamp
 }
 
-//当前统计的服务权重(连接数*统计时间/统计响应时间)
+//当前统计的服务权重(连接数 + 统计响应时间 / 统计时间 )
 //越大代表压力越大
-func (s ServiceStateDetail) StatsWeight() float64 {
+func (s SockStateDetail) StatsWeight() float64 {
 	if 0 == s.StatsRespUnixNano {
-		return float64(s.LinkCount)
+		return 0
 	} else {
-		pass := s.getStatsPass()
-		return float64(s.LinkCount) * float64(pass) / float64(s.StatsRespUnixNano)
+		return s.StatsRespCoefficient()
 	}
 }
 
-//统计时间段的请求密度(次数/秒)
-func (s ServiceStateDetail) StatsReqDensity() int {
-	pass := s.getStatsPass()
-	return int(int64(time.Second) * s.StatsReqCount / pass)
+//响应系数(响应总时间/统计总时间),
+// 注意：结果正常设置下为[0,1]
+func (s SockStateDetail) RespCoefficient() float64 {
+	return float64(s.TotalRespTime) / (float64(s.GetPassNano()) * float64(runtime.NumCPU()))
 }
 
-//统计时间段的响应密度(统计响应时间/统计时间)
-func (s ServiceStateDetail) StatsRespDensity() float64 {
-	pass := time.Now().UnixNano() - s.StartTimestamp
-	return float64(s.StatsRespUnixNano) / float64(pass)
+//平均响应时间(响应总时间/响应次数)
+func (s SockStateDetail) RespAvgTime() float64 {
+	return float64(s.TotalRespTime) / float64(s.TotalReqCount)
+}
+
+//时间请求密度(次数/秒)
+func (s SockStateDetail) ReqDensityTime() int {
+	pass := s.GetPassNano()
+	return int(int64(time.Second) * s.TotalReqCount / pass)
+}
+
+//区间响应系数(响应总时间/统计总时间),
+// 注意：结果正常设置下为[0,1]
+func (s SockStateDetail) StatsRespCoefficient() float64 {
+	return float64(s.StatsRespUnixNano) / (float64(s.getStatsPass()) * float64(runtime.NumCPU()))
+}
+
+//区间平均响应时间(响应总时间/响应次数)
+func (s SockStateDetail) StatsRespAvgTime() float64 {
+	return float64(s.StatsRespUnixNano) / float64(s.StatsReqCount)
+}
+
+//区间时间请求密度(次数/秒)
+func (s SockStateDetail) StatsReqDensityTime() int {
+	pass := s.getStatsPass()
+	return int(int64(time.Second) * s.StatsReqCount / pass)
 }
 
 //-------------------------------
 
 //启动
-func (s *ServiceStateDetail) Start() {
+func (s *SockStateDetail) Start() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	now := time.Now().UnixNano()
@@ -126,7 +164,7 @@ func (s *ServiceStateDetail) Start() {
 }
 
 //增加一个连接
-func (s *ServiceStateDetail) AddLinkCount() {
+func (s *SockStateDetail) AddLinkCount() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.LinkCount++
@@ -136,7 +174,7 @@ func (s *ServiceStateDetail) AddLinkCount() {
 }
 
 //减少一个连接
-func (s *ServiceStateDetail) RemoveLinkCount() {
+func (s *SockStateDetail) RemoveLinkCount() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.LinkCount--
@@ -145,7 +183,7 @@ func (s *ServiceStateDetail) RemoveLinkCount() {
 //----------------------
 
 //增加一个请求
-func (s *ServiceStateDetail) AddReqCount() {
+func (s *SockStateDetail) AddReqCount() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if s.statsFull() {
@@ -156,7 +194,7 @@ func (s *ServiceStateDetail) AddReqCount() {
 }
 
 //增加响应时间量
-func (s *ServiceStateDetail) AddRespUnixNano(unixNano int64) {
+func (s *SockStateDetail) AddRespUnixNano(unixNano int64) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.StatsRespUnixNano += unixNano
@@ -167,7 +205,7 @@ func (s *ServiceStateDetail) AddRespUnixNano(unixNano int64) {
 }
 
 //重新统计
-func (s *ServiceStateDetail) ReStats() {
+func (s *SockStateDetail) ReStats() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.statsReset()
@@ -176,16 +214,16 @@ func (s *ServiceStateDetail) ReStats() {
 //----------------------
 
 //重置统计数据
-func (s *ServiceStateDetail) statsReset() {
+func (s *SockStateDetail) statsReset() {
 	s.StatsReqCount = 0
 	s.StatsTimestamp = time.Now().UnixNano()
 	s.StatsRespUnixNano = 0
 }
 
-func (s ServiceStateDetail) getStatsPass() int64 {
-	return time.Now().UnixNano() - s.StartTimestamp
+func (s SockStateDetail) getStatsPass() int64 {
+	return time.Now().UnixNano() - s.StatsTimestamp
 }
 
-func (s ServiceStateDetail) statsFull() bool {
+func (s SockStateDetail) statsFull() bool {
 	return s.getStatsPass() >= s.StatsInterval
 }

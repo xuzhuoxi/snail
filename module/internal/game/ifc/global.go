@@ -13,7 +13,6 @@ import (
 	"github.com/xuzhuoxi/infra-go/lang"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/snail/module/imodule"
 	"time"
 )
 
@@ -32,7 +31,10 @@ var (
 )
 
 const (
-	GameNotifyRouteInterval = time.Duration(imodule.DefaultStatsInterval)
+	//通知Route间隔
+	GameNotifyRouteInterval = time.Second * 30
+	//统计时间区间
+	DefaultStatsInterval = int64(5 * time.Minute)
 )
 
 func init() {

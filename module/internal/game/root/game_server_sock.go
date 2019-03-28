@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-func NewGameSock(conf conf.ServiceConf, single ifc.IGameSingleCase) *GameSock {
+func NewGameSock(conf conf.SockConf, single ifc.IGameSingleCase) *GameSock {
 	container := extension.NewISnailExtensionContainer()
 	registerExtension(container, single)
 	container.InitExtensions()
@@ -31,16 +31,16 @@ func NewGameSock(conf conf.ServiceConf, single ifc.IGameSingleCase) *GameSock {
 	server.SetMax(100)
 	server.SetLogger(single.GetLogger())
 
-	Status := imodule.NewServiceStateDetail(conf.Name, imodule.DefaultStatsInterval)
+	SockState := imodule.NewSockStateDetail(conf.Name, ifc.DefaultStatsInterval)
 
-	return &GameSock{Conf: conf, Server: server, Container: container, StateDetail: Status}
+	return &GameSock{Conf: conf, Server: server, Container: container, SockStateDetail: SockState}
 }
 
 type GameSock struct {
-	Conf        conf.ServiceConf
-	Server      netx.ITCPServer
-	Container   ifc.IGameExtensionContainer
-	StateDetail *imodule.ServiceStateDetail
+	Conf            conf.SockConf
+	Server          netx.ITCPServer
+	Container       ifc.IGameExtensionContainer
+	SockStateDetail *imodule.SockStateDetail
 }
 
 func (gs *GameSock) Running() bool {
@@ -52,21 +52,21 @@ func (gs *GameSock) Running() bool {
 }
 
 func (gs *GameSock) GetPassSecond() int64 {
-	return gs.StateDetail.GetPassNano() / int64(time.Second)
+	return gs.SockStateDetail.GetPassNano() / int64(time.Second)
 }
 
-func (gs *GameSock) GetStateDetail() imodule.IServiceStateDetail {
-	return gs.StateDetail
+func (gs *GameSock) GetStateDetail() imodule.ISockStateDetail {
+	return gs.SockStateDetail
 }
 
-func (gs *GameSock) GetStateSimple() imodule.ServiceState {
-	return imodule.ServiceState{Name: gs.StateDetail.Name, Weight: gs.StateDetail.StatsWeight()}
+func (gs *GameSock) GetStateSimple() imodule.SockState {
+	return imodule.SockState{SockName: gs.SockStateDetail.SockName, SockWeight: gs.SockStateDetail.StatsWeight()}
 }
 
 //-------------------
 
 func (gs *GameSock) SockRun() {
-	gs.StateDetail.Start()
+	gs.SockStateDetail.Start()
 	gs.Server.AddEventListener(netx.ServerEventConnOpened, gs.onConnOpened)
 	gs.Server.AddEventListener(netx.ServerEventConnClosed, gs.onConnClosed)
 	gs.Server.GetPackHandler().AppendPackHandler(gs.onPack)
@@ -83,19 +83,19 @@ func (gs *GameSock) SockStop() {
 //------------------
 
 func (gs *GameSock) onConnOpened(evd *eventx.EventData) {
-	gs.StateDetail.AddLinkCount()
+	gs.SockStateDetail.AddLinkCount()
 }
 
 func (gs *GameSock) onConnClosed(evd *eventx.EventData) {
 	address := evd.Data.(string)
 	ifc.AddressProxy.RemoveByAddress(address)
-	gs.StateDetail.RemoveLinkCount()
+	gs.SockStateDetail.RemoveLinkCount()
 }
 
 //消息处理入口，这里是并发方法
 //msgData非共享的，但在parsePackMessage后这部分数据会发生变化
 func (gs *GameSock) onPack(msgData []byte, senderAddress string, other interface{}) bool {
-	gs.StateDetail.AddReqCount()
+	gs.SockStateDetail.AddReqCount()
 	name, pid, uid, data := gs.parsePackMessage(msgData)
 	extension := gs.getProtocolExtension(name)
 	if nil == extension {
@@ -111,7 +111,7 @@ func (gs *GameSock) onPack(msgData []byte, senderAddress string, other interface
 		defer func() {
 			un := time.Now().UnixNano() - tn
 			ifc.LoggerExtension.Infoln(name, pid, un, timex.FormatUnixMilli(un/1e6, "5.999999ms")) //记录响应时间
-			gs.StateDetail.AddRespUnixNano(un)
+			gs.SockStateDetail.AddRespUnixNano(un)
 		}()
 		gs.handleExtension(extension, senderAddress, name, pid, uid, data)
 	}()

@@ -18,19 +18,19 @@ func BaseLogPath() string {
 	return filepath.Dir(os.Args[0]) + "/log/"
 }
 
-type ServiceConf struct {
+type SockConf struct {
 	Name    string `json:"name"`
 	Network string `json:"network"`
 	Addr    string `json:"addr"`
 }
 
 type ObjectConf struct {
-	Id          string   `json:"id"`
-	ModuleName  string   `json:"module"`
-	RpcList     []string `json:"rpc,omitempty"`
-	ServiceList []string `json:"service,omitempty"`
-	Remotes     []string `json:"remotes,omitempty"`
-	Log         string   `json:"log,omitempty"`
+	Id         string   `json:"id"`
+	ModuleName string   `json:"module"`
+	RpcList    []string `json:"rpc,omitempty"`
+	SockList   []string `json:"socks,omitempty"`
+	Remotes    []string `json:"remotes,omitempty"`
+	Log        string   `json:"log,omitempty"`
 
 	conf *Conf
 }
@@ -43,27 +43,27 @@ func (oc ObjectConf) LogFileInfo() (fileDir string, fileBaseName string, fileExt
 	return
 }
 
-func (c ObjectConf) GetServiceConf(name string) (ServiceConf, bool) {
+func (c ObjectConf) GetServiceConf(name string) (SockConf, bool) {
 	return c.conf.GetServiceConf(name)
 }
 
 type Conf struct {
-	Services []ServiceConf `json:"services,omitempty"`
-	Routes   []ObjectConf  `json:"routes,omitempty"`
-	Admins   []ObjectConf  `json:"admins,omitempty"`
-	Games    []ObjectConf  `json:"games,omitempty"`
-	OnList   []string      `json:"onList"`
+	Socks  []SockConf   `json:"socks,omitempty"`
+	Routes []ObjectConf `json:"routes,omitempty"`
+	Admins []ObjectConf `json:"admins,omitempty"`
+	Games  []ObjectConf `json:"games,omitempty"`
+	OnList []string     `json:"onList"`
 
-	mapService map[string]ServiceConf
+	mapService map[string]SockConf
 	mapObject  map[string]ObjectConf
 }
 
-func (c *Conf) GetServiceConf(name string) (ServiceConf, bool) {
+func (c *Conf) GetServiceConf(name string) (SockConf, bool) {
 	rs, has := c.mapService[name]
 	if has {
 		return rs, true
 	}
-	return ServiceConf{}, false
+	return SockConf{}, false
 }
 
 func (c *Conf) GetObjectById(id string) (ObjectConf, bool) {
@@ -75,8 +75,8 @@ func (c *Conf) GetObjectById(id string) (ObjectConf, bool) {
 }
 
 func (c *Conf) handleData() {
-	c.mapService = make(map[string]ServiceConf)
-	for _, val := range c.Services {
+	c.mapService = make(map[string]SockConf)
+	for _, val := range c.Socks {
 		c.mapService[val.Name] = val
 	}
 	objectToMap := func(m map[string]ObjectConf, objects []ObjectConf) {
@@ -118,7 +118,7 @@ func ParseConfig(configName string) *Conf {
 	return cfg
 }
 
-func GetServiceConf(name string) (ServiceConf, bool) {
+func GetServiceConf(name string) (SockConf, bool) {
 	return DefaultConfig.GetServiceConf(name)
 }
 

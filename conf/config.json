@@ -1,42 +1,50 @@
 {
-  "services": [
+  "socks": [
     {"name": "rpc_route0", "network": "tcp", "addr": "127.0.0.1:40000"},
     {"name": "rpc_game0", "network": "tcp", "addr": "127.0.0.1:41000"},
     {"name": "rpc_game1", "network": "tcp", "addr": "127.0.0.1:42000"},
+    {"name": "rpc_game2", "network": "tcp", "addr": "127.0.0.1:43000"},
     {"name": "out_route0", "network": "http", "addr": "127.0.0.1:30000"},
     {"name": "out_game0", "network": "tcp", "addr": "127.0.0.1:31000"},
-    {"name": "out_game1", "network": "tcp", "addr": "127.0.0.1:32000"}
+    {"name": "out_game1", "network": "tcp", "addr": "127.0.0.1:32000"},
+    {"name": "out_game2", "network": "tcp", "addr": "127.0.0.1:33000"}
   ],
   "routes": [
     {
       "id": "route0",
       "module": "route",
       "rpc": ["rpc_route0"],
-      "service": ["out_route0"],
-      "log": "route0.log"
+      "socks": ["out_route0"],
+      "log": "route/route0.log"
     }
   ],
   "games": [
     {
       "id": "game0", "module": "game",
       "rpc": ["rpc_game0"],
-      "service": ["out_game0"],
+      "socks": ["out_game0"],
       "remotes":["rpc_route0"],
-      "log": "game0.log"
+      "log": "game/game0.log"
     }, {
       "id": "game1", "module": "game",
       "rpc": ["rpc_game1"],
-      "service": ["out_game1"],
+      "socks": ["out_game1"],
       "remotes":["rpc_route0"],
-      "log": "game1.log"
+      "log": "game/game1.log"
+    }, {
+      "id": "game2", "module": "game",
+      "rpc": ["rpc_game2"],
+      "socks": ["out_game2"],
+      "remotes":["rpc_route0"],
+      "log": "game/game2.log"
     }
   ],
   "admins": [
     {
       "id": "admin0", "module": "admin",
       "rpc": ["rpc_admin0"],
-      "service": ["out_admin0"],
-      "log": "admin0.log"
+      "socks": ["out_admin0"],
+      "log": "admin/admin0.log"
     }
   ],
   "onList": ["route0","game0","game1"]

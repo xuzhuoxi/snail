@@ -6,6 +6,7 @@
 package impl
 
 import (
+	"fmt"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"sort"
@@ -15,182 +16,205 @@ import (
 
 const Timeout = int64(time.Minute)
 
-type server struct {
+func newSockCollection() iSockCollection {
+	return &sockCollection{}
+}
+
+//----------------
+
+type sock struct {
 	ModuleId   string
 	ModuleName imodule.ModuleName
 
-	ServiceConf  conf.ServiceConf
-	ServiceState imodule.ServiceState
+	conf.SockConf
+	imodule.SockState
 
 	lastTimestamp int64
 }
 
-func (s *server) ServerId() string {
-	return s.ServiceConf.Name
+func (s *sock) SockName() string {
+	return s.SockConf.Name
 }
 
-func (s *server) Timeout() bool {
+func (s *sock) Timeout() bool {
 	return (time.Now().UnixNano() - s.lastTimestamp) >= Timeout
 }
 
 //-----------------------------
 
-type serverList []*server
+type sockList []*sock
 
-func (c serverList) Len() int {
-	return len(c)
+func (sl sockList) Len() int {
+	return len(sl)
 }
 
-func (c serverList) Less(i, j int) bool {
-	return c[i].ServiceState.Weight < c[j].ServiceState.Weight
+func (sl sockList) Less(i, j int) bool {
+	return sl[i].SockWeight < sl[j].SockWeight
 }
 
-func (c serverList) Swap(i, j int) {
-	c[i], c[j] = c[j], c[i]
+func (sl sockList) Swap(i, j int) {
+	sl[i], sl[j] = sl[j], sl[i]
+}
+
+func (sl sockList) List() []*sock {
+	if nil == sl {
+		return nil
+	}
+	return sl
 }
 
 //-----------------------------
 
-type iCollection interface {
-	AddServer(server)
-	RemoveServer(id string) *server
-	UpdateServerState(state imodule.ServiceState)
+type iSockCollection interface {
+	AddSock(s *sock)
+	RemoveSock(id string) *sock
+	UpdateSockState(state imodule.SockState)
 
-	CheckServerById(id string) bool
-	GetServerById(id string) *server
-	GetServersByModuleId(id string) []*server
-	GetServersByModule(moduleName imodule.ModuleName) []*server
+	CheckSockByName(id string) bool
+	GetSockByName(id string) *sock
+	GetSocksByModuleId(id string) []*sock
+	GetSocksByModule(moduleName imodule.ModuleName) []*sock
 
 	ClearTimeout() []string
+	GetWeightSock() *sock
 }
 
-type collection struct {
-	servers serverList
-	maps    map[string]*server
-	mu      sync.Mutex
+type sockCollection struct {
+	socks sockList
+	mu    sync.RWMutex
 }
 
-func (c *collection) AddServer(server server) {
+func (c *sockCollection) AddSock(server *sock) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.addServer(&server)
+	c.addSock(server)
 }
 
-func (c *collection) RemoveServer(id string) *server {
+func (c *sockCollection) RemoveSock(id string) *sock {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.removeServerById(id)
+	return c.removeSockById(id)
 }
 
-func (c *collection) UpdateServerState(state imodule.ServiceState) {
+func (c *sockCollection) UpdateSockState(state imodule.SockState) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	name := state.Name
-	if c.hasServer(name) {
-		c.maps[name].ServiceState = state
-		c.maps[name].lastTimestamp = time.Now().UnixNano()
+	if s := c.getSock(state.SockName); s != nil {
+		s.SockState = state
 	}
 }
 
-func (c *collection) CheckServerById(id string) bool {
+func (c *sockCollection) CheckSockByName(name string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.hasServer(id)
-}
-
-func (c *collection) GetServerById(id string) *server {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	val, ok := c.maps[id]
-	if ok {
-		return copyServer(val)
+	if s := c.getSock(name); nil != s {
+		return true
 	}
-	return nil
+	return false
 }
 
-func (c *collection) GetServersByModuleId(id string) []*server {
+func (c *sockCollection) GetSockByName(name string) *sock {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var rs []*server
-	for _, server := range c.servers {
+	return c.getSock(name)
+}
+
+func (c *sockCollection) GetSocksByModuleId(id string) []*sock {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var rs []*sock
+	for _, server := range c.socks {
 		if server.ModuleId == id {
-			rs = append(rs, copyServer(server))
+			rs = append(rs, server)
 		}
 	}
 	return rs
 }
 
-func (c *collection) GetServersByModule(moduleName imodule.ModuleName) []*server {
+func (c *sockCollection) GetSocksByModule(moduleName imodule.ModuleName) []*sock {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var rs []*server
-	for _, server := range c.servers {
+	var rs []*sock
+	for _, server := range c.socks {
 		if server.ModuleName == moduleName {
-			rs = append(rs, copyServer(server))
+			rs = append(rs, server)
 		}
 	}
 	return rs
 }
 
-func (c *collection) ClearTimeout() []string {
+func (c *sockCollection) GetWeightSock() *sock {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	c.clearTimeout()
+	if c.socks.Len() <= 0 {
+		return nil
+	}
+	sort.Sort(c.socks)
+	return c.socks[0]
+}
+
+func (c *sockCollection) ClearTimeout() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var rs []string
-	for index := len(c.servers) - 1; index >= 0; index-- {
-		if c.servers[index].Timeout() {
-			rs = append(rs, c.removeServerByIndex(index).ServerId())
-		}
-	}
-	return rs
+	return c.clearTimeout()
 }
 
 //---------------------------
 
-func (c *collection) hasServer(id string) bool {
-	_, ok := c.maps[id]
-	return ok
-}
-
-func (c *collection) addServer(server *server) {
-	if c.hasServer(server.ServerId()) {
-		return
-	}
-	c.servers = append(c.servers, server)
-	c.maps[server.ServerId()] = server
-}
-
-func (c *collection) removeServerById(id string) *server {
-	for index := 0; index < c.servers.Len(); index-- {
-		if id == c.servers[index].ServerId() {
-			rs := c.servers[index]
-			c.servers = append(c.servers[:index], c.servers[index+1:]...)
-			delete(c.maps, id)
-			return rs
+func (c *sockCollection) getSock(name string) *sock {
+	for _, ss := range c.socks {
+		if ss.SockName() == name {
+			return ss
 		}
 	}
 	return nil
 }
 
-func (c *collection) removeServerByIndex(index int) *server {
-	if index < 0 || index >= c.servers.Len() {
+func (c *sockCollection) addSock(sock *sock) {
+	if s := c.getSock(sock.SockName()); nil != s {
+		return
+	}
+	c.socks = append(c.socks.List(), sock)
+}
+
+func (c *sockCollection) removeSockByIndex(index int) *sock {
+	if index < 0 || index >= c.socks.Len() {
 		return nil
 	}
-	rs := c.servers[index]
-	c.servers = append(c.servers[:index], c.servers[index+1:]...)
-	delete(c.maps, rs.ServerId())
+	list := c.socks.List()
+	rs := list[index]
+	c.socks = append(list[:index], list[index+1:]...)
 	return rs
 }
 
-func (c *collection) sortServers(servers serverList) []*server {
-	sort.Sort(servers)
-	return servers
+func (c *sockCollection) removeSockById(id string) *sock {
+	for index, server := range c.socks {
+		if id == server.SockName() {
+			return c.removeSockByIndex(index)
+		}
+	}
+	return nil
 }
 
-func copyServer(server *server) *server {
-	copy := *server
-	return &copy
+//
+//func (c *sockCollection) copyServer(sock *sock) *sock {
+//	copy := *sock
+//	return &copy
+//}
+
+func (c *sockCollection) clearTimeout() []string {
+	var rs []string
+	for index := c.socks.Len() - 1; index >= 0; index-- {
+		if c.socks[index].Timeout() {
+			rs = append(rs, c.removeSockByIndex(index).SockName())
+		}
+	}
+	return rs
 }
 
-func newCollection() iCollection {
-	return &collection{servers: nil, maps: make(map[string]*server)}
+func (c *sockCollection) printSocks() {
+	for index, s := range c.socks {
+		fmt.Println("服务器：", index, s.SockName(), s.SockState)
+	}
 }
