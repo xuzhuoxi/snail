@@ -10,11 +10,17 @@ import (
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/encodingx/gobx"
 	"github.com/xuzhuoxi/infra-go/lang"
+	"time"
 )
 
 var (
 	DataBlockHandler = bytex.NewDefaultDataBlockHandler() //数据封包处理
 	PoolBuffDecoder  = lang.NewObjectPoolSync()
+)
+
+const (
+	//更新超时时间
+	SockTimeout = int64(time.Second * 90)
 )
 
 func init() {

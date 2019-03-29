@@ -95,13 +95,12 @@ func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply
 		for _, bs := range args.Data {
 			decoder.WriteBytes(bs)
 		}
-		var module imodule.ModuleName
-		decoder.DecodeDataFromBuff(&module)
+		var owner imodule.SockOwner
+		decoder.DecodeDataFromBuff(&owner)
 		for index := 1; index < len(args.Data); index++ {
 			var conf conf.SockConf
-			var weight float64
-			decoder.DecodeDataFromBuff(&conf, &weight)
-			server := &sock{ModuleId: args.From, ModuleName: module, SockConf: conf, SockState: imodule.SockState{SockName: conf.Name, SockWeight: weight}, lastTimestamp: time.Now().UnixNano()}
+			decoder.DecodeDataFromBuff(&conf)
+			server := &sock{SockOwner: owner, SockConf: conf, SockState: imodule.SockState{SockName: conf.Name}, lastTimestamp: time.Now().UnixNano()}
 			servers = append(servers, *server)
 			m.sockCollection.AddSock(server)
 		}
@@ -143,13 +142,12 @@ func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCRep
 }
 
 func (m *ModuleRoute) onQueryRoute(w http.ResponseWriter, r *http.Request) {
-	server := m.sockCollection.GetWeightSock()
-	if nil == server {
+	if sock, ok := m.sockCollection.GetWeightSock(); ok {
+		bs, _ := jsoniter.Marshal(sock.SockConf)
+		w.Write(bs)
+		m.Logger.Infoln("ModuleRoute:onQueryRoute:", sock.SockConf, sock.SockConnections)
+	} else {
 		w.Write([]byte(""))
 		m.Logger.Warnln("ModuleRoute:onQueryRoute:", "None Server")
-	} else {
-		bs, _ := jsoniter.Marshal(server.SockConf)
-		w.Write(bs)
-		m.Logger.Infoln("ModuleRoute:onQueryRoute:", server.SockConf)
 	}
 }

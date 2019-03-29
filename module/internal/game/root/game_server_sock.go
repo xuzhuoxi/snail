@@ -55,12 +55,12 @@ func (gs *GameSock) GetPassSecond() int64 {
 	return gs.SockStateDetail.GetPassNano() / int64(time.Second)
 }
 
-func (gs *GameSock) GetStateDetail() imodule.ISockStateDetail {
+func (gs *GameSock) GetSockStateDetail() imodule.ISockStateDetail {
 	return gs.SockStateDetail
 }
 
-func (gs *GameSock) GetStateSimple() imodule.SockState {
-	return imodule.SockState{SockName: gs.SockStateDetail.SockName, SockWeight: gs.SockStateDetail.StatsWeight()}
+func (gs *GameSock) GetSockState() imodule.SockState {
+	return imodule.SockState{SockName: gs.SockStateDetail.SockName, SockConnections: gs.SockStateDetail.LinkCount, SockWeight: gs.SockStateDetail.StatsWeight()}
 }
 
 //-------------------

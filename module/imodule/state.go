@@ -13,6 +13,7 @@ import (
 
 type ISockState interface {
 	GetSockName() string
+	GetSockSockConnections() uint64
 	GetSockWeight() float64
 }
 
@@ -41,19 +42,27 @@ type ISockStateDetail interface {
 	StatsReqDensityTime() int
 }
 
-func NewSockState(name string, weight float64) *SockState {
-	return &SockState{SockName: name, SockWeight: weight}
-}
-
 func NewSockStateDetail(name string, statsInterval int64) *SockStateDetail {
 	return &SockStateDetail{SockName: name, StatsInterval: statsInterval}
 }
 
 //------------------------------
 
+//Sock的拥有者信息
+type SockOwner struct {
+	//平台id
+	PlatformId string
+	//模块id
+	ModuleId string
+	//模块类型名称
+	ModuleName ModuleName
+}
+
 type SockState struct {
 	//名称
 	SockName string
+	//连接数
+	SockConnections uint64
 	//压力
 	SockWeight float64
 	////响应系数(响应总时间 / (统计总时间 * 逻辑cpu数)),
@@ -67,6 +76,10 @@ type SockState struct {
 
 func (ss *SockState) GetSockName() string {
 	return ss.SockName
+}
+
+func (ss *SockState) GetSockSockConnections() uint64 {
+	return ss.SockConnections
 }
 
 func (ss *SockState) GetSockWeight() float64 {
