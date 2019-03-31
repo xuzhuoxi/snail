@@ -30,7 +30,7 @@ func (e *LoginExtension) InitProtocolId() {
 	e.ProtoIdToValue[ReLoginId] = struct{}{}
 }
 
-func (e *LoginExtension) OnRequest(resp extendx.IExtensionResponse, protoId string, uid string, data []byte, data2 ...[]byte) {
+func (e *LoginExtension) OnRequest(resp extendx.IExtensionBinaryResponse, protoId string, uid string, data []byte, data2 ...[]byte) {
 	password := string(data)
 	if e.check(uid, password) {
 		ifc.AddressProxy.MapIdAddress(uid, resp.SenderAddress())
@@ -41,7 +41,9 @@ func (e *LoginExtension) OnRequest(resp extendx.IExtensionResponse, protoId stri
 		case ReLoginId:
 			break
 		}
-		//e.GetLogger().Traceln("LoginExtension.OnRequest:", "Check Succ!", protoId, uid, password)
+		data := append([]byte(protoId), []byte(uid)...)
+		resp.SendBinaryResponse(data)
+		e.GetLogger().Traceln("LoginExtension.OnRequest:", "Check Succ!", protoId, uid, password, data)
 	} else {
 		e.GetLogger().Warnln("LoginExtension.OnRequest:", "Check Fail!", protoId, uid, password)
 	}

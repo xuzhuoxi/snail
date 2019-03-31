@@ -31,7 +31,7 @@ func (e *BinaryDemoExtension) BeforeRequest(protoId string) {
 	e.GetLogger().Debugln("BinaryDemoExtension.BeforeRequest!", protoId)
 }
 
-func (e *BinaryDemoExtension) OnRequest(resp extendx.IExtensionResponse, protoId string, uid string, data []byte, data2 ...[]byte) {
+func (e *BinaryDemoExtension) OnRequest(resp extendx.IExtensionBinaryResponse, protoId string, uid string, data []byte, data2 ...[]byte) {
 	e.GetLogger().Debugln("BinaryDemoExtension.BeforeRequest!", protoId, uid, data, data2)
 }
 

@@ -20,13 +20,20 @@ var (
 	AddressProxy     = netx.NewIAddressProxy()            //uid与address的交叉映射,整个game模块共享
 	DataBlockHandler = bytex.NewDefaultDataBlockHandler() //数据封包处理
 
-	//以下为对象池，全game共享
-	PoolBuffToData        = bytex.NewPoolBuffToData()
-	PoolBuffToBlock       = bytex.NewPoolBuffToBlock()
-	PoolBuffEncoder       = lang.NewObjectPoolSync()
-	PoolBuffDecoder       = lang.NewObjectPoolSync()
-	PoolJsonCodingHandler = lang.NewObjectPoolSync()
+	// 以下为对象池，全game共享-----------------------
 
+	// block(带长度的[]byte) -> []byte
+	PoolBuffToData = bytex.NewPoolBuffToData()
+	// []byte -> block(带长度的[]byte)
+	PoolBuffToBlock = bytex.NewPoolBuffToBlock()
+	// Gob序列化与反序列化
+	// 暂时用于通知Route的对象序列化与反序列
+	PoolBuffEncoder = lang.NewObjectPoolSync()
+	PoolBuffDecoder = lang.NewObjectPoolSync()
+	// Json序列化与反序列化
+	// 暂时用于Extension的对象序列化与反序列化
+	PoolJsonCodingHandler = lang.NewObjectPoolSync()
+	// 用于记录日志：Extension响应时间
 	LoggerExtension = logx.NewLogger()
 )
 

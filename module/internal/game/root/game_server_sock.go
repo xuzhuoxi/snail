@@ -130,6 +130,18 @@ func (gs *GameSock) handleExtension(extension ifc.IGameExtension, senderAddress 
 	case protox.IOnBinaryRequestExtension:
 		gs.handleRequestBinary(response, ne, pid, uid, data)
 	case protox.IOnObjectRequestExtension:
+		response.FuncObjToByte = func(o ...interface{}) []byte {
+			var rs []byte
+			ifc.HandleBuffToBlock(func(buffToBlock bytex.IBuffToBlock) {
+				ifc.HandleJsonCoding(func(codingHandler encodingx.ICodingHandler) {
+					for _, obj := range o {
+						buffToBlock.WriteData(codingHandler.HandleEncode(obj))
+					}
+				})
+				rs = buffToBlock.ReadBytesCopy()
+			})
+			return rs
+		}
 		gs.handleRequestObject(response, ne, pid, uid, data)
 	}
 	if ae, ok := extension.(protox.IAfterRequestExtension); ok { //后置处理
@@ -137,7 +149,7 @@ func (gs *GameSock) handleExtension(extension ifc.IGameExtension, senderAddress 
 	}
 }
 
-func (gs *GameSock) handleRequestObject(response extendx.IExtensionResponse, extension protox.IOnObjectRequestExtension, pid string, uid string, data [][]byte) {
+func (gs *GameSock) handleRequestObject(response extendx.IExtensionObjectResponse, extension protox.IOnObjectRequestExtension, pid string, uid string, data [][]byte) {
 	dataLn := len(data)
 	if 0 == dataLn {
 		extension.OnRequest(response, pid, uid, nil)
@@ -148,8 +160,8 @@ func (gs *GameSock) handleRequestObject(response extendx.IExtensionResponse, ext
 		newData := extension.GetRequestData(pid)
 		ifc.HandleJsonCoding(func(codingHandler encodingx.ICodingHandler) {
 			codingHandler.HandleDecode(bs, &newData)
+			list = append(list, newData)
 		})
-		list = append(list, newData)
 	}
 	if dataLn > 1 {
 		if be, ok := extension.(protox.IBatchExtension); ok && be.Batch() {
@@ -164,7 +176,7 @@ func (gs *GameSock) handleRequestObject(response extendx.IExtensionResponse, ext
 	}
 }
 
-func (gs *GameSock) handleRequestBinary(response extendx.IExtensionResponse, extension protox.IOnBinaryRequestExtension, pid string, uid string, data [][]byte) {
+func (gs *GameSock) handleRequestBinary(response extendx.IExtensionBinaryResponse, extension protox.IOnBinaryRequestExtension, pid string, uid string, data [][]byte) {
 	dataLn := len(data)
 	if 0 == dataLn {
 		extension.OnRequest(response, pid, uid, nil)

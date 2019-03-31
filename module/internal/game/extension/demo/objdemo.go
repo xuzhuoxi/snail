@@ -50,7 +50,7 @@ func (e *ObjDemoExtension) GetRequestData(ProtoId string) (dataCopy interface{})
 	return
 }
 
-func (e *ObjDemoExtension) OnRequest(resp extendx.IExtensionResponse, protoId string, uid string, data interface{}, data2 ...interface{}) {
+func (e *ObjDemoExtension) OnRequest(resp extendx.IExtensionObjectResponse, protoId string, uid string, data interface{}, data2 ...interface{}) {
 	e.GetLogger().Debugln("ObjDemoExtension.OnRequest", protoId, uid, data, data2)
 }
 
