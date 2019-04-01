@@ -37,15 +37,15 @@ func init() {
 	})
 }
 
-func HandleBuffDecode(handler func(encodingx.IBuffDecoder)) {
-	decoder := getBuffDecoder()
+func HandleBuffDecodeFromPool(handler func(encodingx.IBuffDecoder)) {
+	decoder := getBuffDecoderFromPool()
 	defer PoolBuffDecoder.Recycle(decoder)
 	handler(decoder)
 }
 
 //---------------------------
 
-func getBuffDecoder() encodingx.IBuffDecoder {
+func getBuffDecoderFromPool() encodingx.IBuffDecoder {
 	rs := PoolBuffDecoder.GetInstance().(encodingx.IBuffDecoder)
 	rs.Reset()
 	return rs

@@ -91,7 +91,7 @@ func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply
 	defer m.mu.Unlock()
 	//m.Logger.Debugln("onConnected:", args.From, args.Data)
 	var servers []sock
-	ifc.HandleBuffDecode(func(decoder encodingx.IBuffDecoder) {
+	ifc.HandleBuffDecodeFromPool(func(decoder encodingx.IBuffDecoder) {
 		for _, bs := range args.Data {
 			decoder.WriteBytes(bs)
 		}
@@ -127,7 +127,7 @@ func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCRep
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var states []imodule.SockState
-	ifc.HandleBuffDecode(func(decoder encodingx.IBuffDecoder) {
+	ifc.HandleBuffDecodeFromPool(func(decoder encodingx.IBuffDecoder) {
 		for index := 0; index < len(args.Data); index++ {
 			decoder.Reset()
 			decoder.WriteBytes(args.Data[index])

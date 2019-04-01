@@ -132,8 +132,8 @@ func (gs *GameSock) handleExtension(extension ifc.IGameExtension, senderAddress 
 	case protox.IOnObjectRequestExtension:
 		response.FuncObjToByte = func(o ...interface{}) []byte {
 			var rs []byte
-			ifc.HandleBuffToBlock(func(buffToBlock bytex.IBuffToBlock) {
-				ifc.HandleJsonCoding(func(codingHandler encodingx.ICodingHandler) {
+			ifc.HandleBuffToBlockFromPool(func(buffToBlock bytex.IBuffToBlock) {
+				ifc.HandleJsonCodingFromPool(func(codingHandler encodingx.ICodingHandler) {
 					for _, obj := range o {
 						buffToBlock.WriteData(codingHandler.HandleEncode(obj))
 					}
@@ -158,7 +158,7 @@ func (gs *GameSock) handleRequestObject(response extendx.IExtensionObjectRespons
 	var list []interface{}
 	for _, bs := range data {
 		newData := extension.GetRequestData(pid)
-		ifc.HandleJsonCoding(func(codingHandler encodingx.ICodingHandler) {
+		ifc.HandleJsonCodingFromPool(func(codingHandler encodingx.ICodingHandler) {
 			codingHandler.HandleDecode(bs, &newData)
 			list = append(list, newData)
 		})
@@ -202,7 +202,7 @@ func (gs *GameSock) handleRequestBinary(response extendx.IExtensionBinaryRespons
 //这里为并发区域，但没有共享资源，可是就是出并发问题
 func (gs *GameSock) parsePackMessage(msgBytes []byte) (name string, pid string, uid string, data [][]byte) {
 	index := 0
-	ifc.HandleBuffToData(func(buffToData bytex.IBuffToData) {
+	ifc.HandleBuffToDataFromPool(func(buffToData bytex.IBuffToData) {
 		buffToData.WriteBytes(msgBytes)
 		name = string(buffToData.ReadData())
 		pid = string(buffToData.ReadData())

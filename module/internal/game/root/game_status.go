@@ -78,7 +78,7 @@ func (s *GameStatus) onGameSockStop(evd *eventx.EventData) {
 //-------------------------------
 
 func (s *GameStatus) notifyConnected(gs *GameSock) {
-	ifc.HandleBuffEncode(func(encoder encodingx.IBuffEncoder) {
+	ifc.HandleBuffEncodeFromPool(func(encoder encodingx.IBuffEncoder) {
 		var data [][]byte //0:ModGame,[]
 
 		owner := imodule.SockOwner{PlatformId: "", ModuleId: s.gameId, ModuleName: imodule.ModGame}
@@ -110,7 +110,7 @@ func (s *GameStatus) notifyDisConnected(gameSockName string) {
 }
 
 func (s *GameStatus) notifyState(gs *GameSock) {
-	ifc.HandleBuffEncode(func(encoder encodingx.IBuffEncoder) {
+	ifc.HandleBuffEncodeFromPool(func(encoder encodingx.IBuffEncoder) {
 		var data [][]byte
 		state := gs.GetSockState()
 		encoder.EncodeDataToBuff(state)
