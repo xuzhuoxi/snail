@@ -18,6 +18,13 @@ go get -u github.com/xuzhuoxi/snail
 - json-iterator [https://github.com/json-iterator/go](https://github.com/json-iterator/go)<br>
 带对应结构体的Json解释库
 
+## Contact
+xuzhuoxi<br>
+<xuzhuoxi@gmail.com> or <mailxuzhuoxi@163.com>
+
+## License
+IconGen source code is available under the MIT [License](/LICENSE).
+
 # Package Description
 包分类及文件功能说明
 <details>
