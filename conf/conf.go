@@ -1,8 +1,8 @@
 package conf
 
 import (
-	"encoding/json"
 	"flag"
+	"github.com/json-iterator/go"
 	"github.com/xuzhuoxi/infra-go/osxu"
 	"io/ioutil"
 	"log"
@@ -10,12 +10,8 @@ import (
 	"path/filepath"
 )
 
-func BasePath() string {
-	return filepath.Dir(os.Args[0])
-}
-
 func BaseLogPath() string {
-	return filepath.Dir(os.Args[0]) + "/log/"
+	return osxu.RunningBaseDir() + "log/"
 }
 
 type SockConf struct {
@@ -113,7 +109,7 @@ func ParseConfig(configName string) *Conf {
 		return nil
 	}
 	cfg := &Conf{}
-	json.Unmarshal(cfgBody, cfg)
+	jsoniter.Unmarshal(cfgBody, cfg)
 	cfg.handleData()
 	return cfg
 }

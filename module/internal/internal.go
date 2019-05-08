@@ -8,8 +8,8 @@ package internal
 //这里不能import子模块如route,game,admin
 //否则会循环引用
 import (
+	"errors"
 	"fmt"
-	"github.com/CodisLabs/codis/pkg/utils/errors"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/conf"
 	"github.com/xuzhuoxi/snail/module/imodule"
