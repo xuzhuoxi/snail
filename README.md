@@ -3,10 +3,9 @@
 # Usage
 
 # How to get
-
-    ```sh
-    go get -u github.com/xuzhuoxi/snail
-    ```
+```
+go get -u github.com/xuzhuoxi/snail
+```
 
 # Related Library
 
