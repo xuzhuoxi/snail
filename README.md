@@ -1,5 +1,13 @@
 # snail
 
+# Usage
+
+# How to get
+
+    ```sh
+    go get -u github.com/xuzhuoxi/snail
+    ```
+
 # Related Library
 
 - infra-go [https://github.com/xuzhuoxi/infra-go](https://github.com/xuzhuoxi/infra-go)<br>
