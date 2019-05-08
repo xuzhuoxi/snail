@@ -2,16 +2,13 @@
 
 # Related Library
 
-- infra-go [https://github.com/xuzhuoxi/infra-go](https://github.com/xuzhuoxi/infra-go)
-
+- infra-go [https://github.com/xuzhuoxi/infra-go](https://github.com/xuzhuoxi/infra-go)<br>
 基础库，整个snail框架中的大部分简单复用的逻辑都抽象到这个基础库中。
 
-- goxc [https://github.com/laher/goxc](https://github.com/laher/goxc)
-
+- goxc [https://github.com/laher/goxc](https://github.com/laher/goxc)<br>
 打包依赖库，主要用于交叉编译
 
-- json-iterator [https://github.com/json-iterator/go](https://github.com/json-iterator/go)
-
+- json-iterator [https://github.com/json-iterator/go](https://github.com/json-iterator/go)<br>
 带对应结构体的Json解释库
 
 # Package Description
