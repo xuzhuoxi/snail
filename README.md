@@ -1,31 +1,129 @@
 # snail
 
-# Usage
+snail是一个游戏服务器框架。开源、免费、扩展性良好，能够动态集群扩展。
 
-# How to get
+当前功能支持如下：
+- 支持多种网络连接方式，包括http,tcp,udp,quic,ws
+- 支持MMO世界
+- 支持自定义通信协议
+- 支持集群部署，动态集群节点更新，自动发现，无限制横向扩展。
+- 支持运行时命令行操作控制
+
+## Usage
+
+### How to get
 ```
 go get -u github.com/xuzhuoxi/snail
 ```
 
-# Related Library
+### How to config
 
-- infra-go [https://github.com/xuzhuoxi/infra-go](https://github.com/xuzhuoxi/infra-go)<br>
-基础库，整个snail框架中的大部分简单复用的逻辑都抽象到这个基础库中。
+[Here](/conf/config.json) is config example.
 
-- goxc [https://github.com/laher/goxc](https://github.com/laher/goxc)<br>
-打包依赖库，主要用于交叉编译
+[Here](https://github.com/xuzhuoxi/snail_test) is a example project base for snail.
 
-- json-iterator [https://github.com/json-iterator/go](https://github.com/json-iterator/go)<br>
-带对应结构体的Json解释库
+Use -c to specify a configuration file if is not named as "config.json".
 
-## Contact
-xuzhuoxi<br>
-<xuzhuoxi@gmail.com> or <mailxuzhuoxi@163.com>
+E.G.
+```json
+{
+  "socks": [
+    {"name": "rpc_route0", "network": "tcp", "addr": "127.0.0.1:40000"},
+    {"name": "rpc_game0", "network": "tcp", "addr": "127.0.0.1:41000"},
+    {"name": "rpc_game1", "network": "tcp", "addr": "127.0.0.1:42000"},
+    {"name": "rpc_game2", "network": "tcp", "addr": "127.0.0.1:43000"},
+    {"name": "out_route0", "network": "http", "addr": "127.0.0.1:30000"},
+    {"name": "out_game0", "network": "tcp", "addr": "127.0.0.1:31000"},
+    {"name": "out_game1", "network": "tcp", "addr": "127.0.0.1:32000"},
+    {"name": "out_game2", "network": "tcp", "addr": "127.0.0.1:33000"}
+  ],
+  "routes": [
+    {
+      "id": "route0",
+      "module": "route",
+      "rpc": ["rpc_route0"],
+      "socks": ["out_route0"],
+      "log": "route/route0.log"
+    }
+  ],
+  "games": [
+    {
+      "id": "game0", "module": "game",
+      "rpc": ["rpc_game0"],
+      "socks": ["out_game0"],
+      "remotes":["rpc_route0"],
+      "log": "game/game0.log"
+    }, {
+      "id": "game1", "module": "game",
+      "rpc": ["rpc_game1"],
+      "socks": ["out_game1"],
+      "remotes":["rpc_route0"],
+      "log": "game/game1.log"
+    }, {
+      "id": "game2", "module": "game",
+      "rpc": ["rpc_game2"],
+      "socks": ["out_game2"],
+      "remotes":["rpc_route0"],
+      "log": "game/game2.log"
+    }
+  ],
+  "admins": [
+    {
+      "id": "admin0", "module": "admin",
+      "rpc": ["rpc_admin0"],
+      "socks": ["out_admin0"],
+      "log": "admin/admin0.log"
+    }
+  ],
+  "onList": ["route0","game0","game1"]
+}
+```
 
-## License
-IconGen source code is available under the MIT [License](/LICENSE).
+**说明:**
+├─ socks:   socket连接配置，这里是数组
+│     ├─ name:      (必须)唯一标识，用于关联引用
+│     ├─ network:   (必须)socket连接方式，支持包括tcp,udp,quic,ws
+│     ├─ addr:      (必须)socket服务器启动地址
+├─ routes:  路由服务器列表
+│     ├─ id:        (必须)唯一标识
+│     ├─ module:    (必须)模块指定，值为"route"
+│     ├─ rpc:       (必须)rpc服务器配置引用，数组，只支持一个元素，元素值为socks中某个元素的name值
+│     ├─ socks:     (必须)sock服务器配置引用，数组，支持多个元素，元素值为socks中某个元素的name值
+│     ├─ log:       (必须)日志文件配置，采用的是相对路径，按日期滚动策略。
+├─ games:   游戏服务器列表
+│     ├─ id:        (必须)唯一标识
+│     ├─ module:    (必须)模块指定，值为"route"
+│     ├─ rpc:       (必须)rpc服务器配置引用，数组，只支持一个元素，元素值为socks中某个元素的name值
+│     ├─ socks:     (必须)sock服务器配置引用，数组，支持多个元素，元素值为socks中某个元素的name值
+│     ├─ remotes:   (必须)集群通知，数组，支持多个元素，元素值为routes中某个元素的id值，作用为集群的节点发现
+│     ├─ log:       (必须)日志文件配置，采用的是相对路径，按日期滚动策略。
+├─ admins:  管理服务器列表，暂时未实现
+├─ onList:  默认启动列表，数组，内容为routes,games,admins中的id，没有加入到onList的服务器配置默认不会启动，可通过运行时命令行手动启动
 
-# Package Description
+### How to add snail to your game
+
+```go
+snail.Run(false)
+```
+
+or
+
+```go
+snail.Run(true)
+```
+
+### How to extend my game logic
+
+If your are using the snail built-in game module. then:
+
+1. New a struct implement IGameExtension. [Here](/module/internal/game/README.md#) is specification.
+2. Call the function "RegisterExtension" in the package "github.com/xuzhuoxi/snail/module/internal/game/ifc" to register your extension go game module.
+3.
+2. Implement one of the interfaces: IOnNoneRequestExtension、IOnBinaryRequestExtension or IOnObjectRequestExtension, and finish your game logic.
+3. Implement other interfaces if your need: IGoroutineExtension、IBatchExtension、IBeforeRequestExtension、IAfterRequestExtension and so on.
+
+
+### Package Description
 包分类及文件功能说明
 <details>
 <summary>Expand view</summary>
@@ -94,3 +192,21 @@ IconGen source code is available under the MIT [License](/LICENSE).
 │   ├── module.go: 模块对外管理入口
 </code></pre>
 </details>
+
+## Related Library
+
+- infra-go [https://github.com/xuzhuoxi/infra-go](https://github.com/xuzhuoxi/infra-go)<br>
+基础库，整个snail框架中的大部分简单复用的逻辑都抽象到这个基础库中。
+
+- goxc [https://github.com/laher/goxc](https://github.com/laher/goxc)<br>
+打包依赖库，主要用于交叉编译
+
+- json-iterator [https://github.com/json-iterator/go](https://github.com/json-iterator/go)<br>
+带对应结构体的Json解释库
+
+## Contact
+xuzhuoxi<br>
+<xuzhuoxi@gmail.com> or <mailxuzhuoxi@163.com>
+
+## License
+IconGen source code is available under the MIT [License](/LICENSE).

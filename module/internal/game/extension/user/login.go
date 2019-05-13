@@ -17,8 +17,8 @@ const (
 	ReLoginId = "RLI"
 )
 
-func NewLoginExtension(Name string, SingleCase ifc.IGameSingleCase) *LoginExtension {
-	return &LoginExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name, SingleCase)}
+func NewLoginExtension(Name string) *LoginExtension {
+	return &LoginExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name)}
 }
 
 type LoginExtension struct {
@@ -28,6 +28,11 @@ type LoginExtension struct {
 func (e *LoginExtension) InitProtocolId() {
 	e.ProtoIdToValue[LoginId] = struct{}{}
 	e.ProtoIdToValue[ReLoginId] = struct{}{}
+}
+
+func (e *LoginExtension) InitExtension() error {
+	e.GetLogger().Debugln("LoginExtension.InitExtension", e.Name)
+	return nil
 }
 
 func (e *LoginExtension) OnRequest(resp extendx.IExtensionBinaryResponse, protoId string, uid string, data []byte, data2 ...[]byte) {

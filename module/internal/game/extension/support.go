@@ -11,14 +11,18 @@ import (
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewGameExtensionSupport(Name string, SingleCase ifc.IGameSingleCase) GameExtensionSupport {
+func NewGameExtensionSupport(Name string) GameExtensionSupport {
 	support := protox.NewProtocolExtensionSupport(Name)
-	return GameExtensionSupport{ProtocolExtensionSupport: support, SingleCase: SingleCase}
+	return GameExtensionSupport{ProtocolExtensionSupport: support}
 }
 
 type GameExtensionSupport struct {
 	protox.ProtocolExtensionSupport
 	SingleCase ifc.IGameSingleCase
+}
+
+func (e *GameExtensionSupport) SetSingleCase(singleCase ifc.IGameSingleCase) {
+	e.SingleCase = singleCase
 }
 
 func (e *GameExtensionSupport) GetLogger() logx.ILogger {

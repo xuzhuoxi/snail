@@ -8,7 +8,6 @@ package demo
 import (
 	"github.com/xuzhuoxi/infra-go/extendx"
 	"github.com/xuzhuoxi/snail/module/internal/game/extension"
-	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
 type testA struct {
@@ -17,8 +16,8 @@ type testA struct {
 	C bool
 }
 
-func NewObjDemoExtension(Name string, SingleCase ifc.IGameSingleCase) *ObjDemoExtension {
-	return &ObjDemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name, SingleCase)}
+func NewObjDemoExtension(Name string) *ObjDemoExtension {
+	return &ObjDemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name)}
 }
 
 //Extension至少实现两个接口

@@ -23,7 +23,7 @@ import (
 
 func NewGameSock(conf conf.SockConf, single ifc.IGameSingleCase) *GameSock {
 	container := extension.NewISnailExtensionContainer()
-	registerExtension(container, single)
+	injectExtensions(container, single)
 	container.InitExtensions()
 
 	server := netx.NewTCPServer()

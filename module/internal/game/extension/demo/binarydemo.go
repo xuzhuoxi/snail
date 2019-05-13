@@ -8,11 +8,10 @@ package demo
 import (
 	"github.com/xuzhuoxi/infra-go/extendx"
 	"github.com/xuzhuoxi/snail/module/internal/game/extension"
-	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewBinaryDemoExtension(Name string, SingleCase ifc.IGameSingleCase) *BinaryDemoExtension {
-	return &BinaryDemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name, SingleCase)}
+func NewBinaryDemoExtension(Name string) *BinaryDemoExtension {
+	return &BinaryDemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name)}
 }
 
 //Extension至少实现两个接口

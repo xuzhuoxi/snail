@@ -8,11 +8,10 @@ package demo
 import (
 	"github.com/xuzhuoxi/infra-go/extendx"
 	"github.com/xuzhuoxi/snail/module/internal/game/extension"
-	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewNoneDemoExtension(Name string, SingleCase ifc.IGameSingleCase) *NoneDemoExtension {
-	return &NoneDemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name, SingleCase)}
+func NewNoneDemoExtension(Name string) *NoneDemoExtension {
+	return &NoneDemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name)}
 }
 
 //Extension规范：

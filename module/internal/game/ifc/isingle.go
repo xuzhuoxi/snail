@@ -15,3 +15,7 @@ type IGameSingleCase interface {
 
 	Init()
 }
+
+type IGameSingleCaseSetter interface {
+	SetSingleCase(singleCase IGameSingleCase)
+}
