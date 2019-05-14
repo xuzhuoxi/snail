@@ -25,6 +25,7 @@ ifc.RegisterExtension(func() ifc.IGameExtension {
 
 - Extension must implement two interfaces: IGameExtension and one of them(IOnNoneRequestExtension、IOnBinaryRequestExtension、IOnObjectRequestExtension).
 - Other extension function, you can see:
-  [/engine/extension](./engine/extension)<br>
+
+  [/engine/extension](/engine/extension)<br>
   [/module/internal/game/ifc/iextension.go](/module/internal/game/ifc/iextension.go)<br>
   [github.com/xuzhuoxi/infra-go/infra-go/extendx](https://github.com/xuzhuoxi/infra-go/tree/master/extendx)<br>
