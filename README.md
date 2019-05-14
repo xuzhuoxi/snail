@@ -80,8 +80,8 @@ E.G.
 ```
 
 **说明**:
-- *socks:   <pre>socket连接配置，这里是数组</pre>
-    - name:      <pre>(必须)唯一标识，用于关联引用</pre>
+- socks:   socket连接配置，这里是数组
+    - name:      (必须)唯一标识，用于关联引用
     - network:   (必须)socket连接方式，支持包括tcp,udp,quic,ws
     - addr:      (必须)socket服务器启动地址
 - routes:  路由服务器列表
