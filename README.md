@@ -114,14 +114,7 @@ snail.Run(true)
 
 ### How to extend my game logic
 
-If your are using the snail built-in game module. then:
-
-1. New a struct implement IGameExtension. [Here](/module/internal/game/README.md#) is specification.
-2. Call the function "RegisterExtension" in the package "github.com/xuzhuoxi/snail/module/internal/game/ifc" to register your extension go game module.
-3.
-2. Implement one of the interfaces: IOnNoneRequestExtension、IOnBinaryRequestExtension or IOnObjectRequestExtension, and finish your game logic.
-3. Implement other interfaces if your need: IGoroutineExtension、IBatchExtension、IBeforeRequestExtension、IAfterRequestExtension and so on.
-
+You can see [README.md](/module/internal/game/README.md) for the game module.
 
 ### Package Description
 包分类及文件功能说明
