@@ -79,26 +79,27 @@ E.G.
 }
 ```
 
-**说明:**<br>
-├─ socks:   socket连接配置，这里是数组<br>
-│     ├─ name:      (必须)唯一标识，用于关联引用<br>
-│     ├─ network:   (必须)socket连接方式，支持包括tcp,udp,quic,ws<br>
-│     ├─ addr:      (必须)socket服务器启动地址<br>
-├─ routes:  路由服务器列表<br>
-│     ├─ id:        (必须)唯一标识<br>
-│     ├─ module:    (必须)模块指定，值为"route"<br>
-│     ├─ rpc:       (必须)rpc服务器配置引用，数组，只支持一个元素，元素值为socks中某个元素的name值<br>
-│     ├─ socks:     (必须)sock服务器配置引用，数组，支持多个元素，元素值为socks中某个元素的name值<br>
-│     ├─ log:       (必须)日志文件配置，采用的是相对路径，按日期滚动策略<br>
-├─ games:   游戏服务器列表<br>
-│     ├─ id:        (必须)唯一标识<br>
-│     ├─ module:    (必须)模块指定，值为"route"<br>
-│     ├─ rpc:       (必须)rpc服务器配置引用，数组，只支持一个元素，元素值为socks中某个元素的name值<br>
-│     ├─ socks:     (必须)sock服务器配置引用，数组，支持多个元素，元素值为socks中某个元素的name值<br>
-│     ├─ remotes:   (必须)集群通知，数组，支持多个元素，元素值为routes中某个元素的id值，作用为集群的节点发现<br>
-│     ├─ log:       (必须)日志文件配置，采用的是相对路径，按日期滚动策略<br>
-├─ admins:  管理服务器列表，暂时未实现<br>
-├─ onList:  默认启动列表，数组，内容为routes,games,admins中的id，没有加入到onList的服务器配置默认不会启动，可通过运行时命令行手动启动<br>
+**说明:**
+
+- socks:   socket连接配置，这里是数组
+    - name:      (必须)唯一标识，用于关联引用
+    - network:   (必须)socket连接方式，支持包括tcp,udp,quic,ws
+    - addr:      (必须)socket服务器启动地址
+- routes:  路由服务器列表
+    - id:        (必须)唯一标识
+    - module:    (必须)模块指定，值为"route"
+    - rpc:       (必须)rpc服务器配置引用，数组，只支持一个元素，元素值为socks中某个元素的name值
+    - socks:     (必须)sock服务器配置引用，数组，支持多个元素，元素值为socks中某个元素的name值
+    - log:       (必须)日志文件配置，采用的是相对路径，按日期滚动策略
+- games:   游戏服务器列表
+    - id:        (必须)唯一标识
+    - module:    (必须)模块指定，值为"route"
+    - rpc:       (必须)rpc服务器配置引用，数组，只支持一个元素，元素值为socks中某个元素的name值
+    - socks:     (必须)sock服务器配置引用，数组，支持多个元素，元素值为socks中某个元素的name值
+    - remotes:   (必须)集群通知，数组，支持多个元素，元素值为routes中某个元素的id值，作用为集群的节点发现
+    - log:       (必须)日志文件配置，采用的是相对路径，按日期滚动策略
+- admins:  管理服务器列表，暂时未实现
+- onList:  默认启动列表，数组，内容为routes,games,admins中的id，没有加入到onList的服务器配置默认不会启动，可通过运行时命令行手动启动
 
 ### How to add snail to your game
 
