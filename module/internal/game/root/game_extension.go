@@ -19,7 +19,6 @@ func injectExtensions(container extension.ISnailExtensionContainer, single ifc.I
 	ifc.ForeachExtensionConstructor(func(constructor ifc.GameExtensionConstructor) {
 		extension := constructor()
 		extension.SetSingleCase(single)
-		extension.InitProtocolId()
 		container.AppendExtension(extension)
 	})
 }

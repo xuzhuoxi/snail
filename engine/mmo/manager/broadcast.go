@@ -77,7 +77,7 @@ func (m *BroadcastManager) SetLogger(logger logx.ILogger) {
 	m.logger = logger
 }
 
-func (m *BroadcastManager) SetServer(server netx.ISockServer) {
+func (m *BroadcastManager) SetSockServer(server netx.ISockServer) {
 	m.broadcastMu.Lock()
 	defer m.broadcastMu.Unlock()
 	m.sockServer = server

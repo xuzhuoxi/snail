@@ -62,9 +62,9 @@ func (m *MMOManager) DisposeManager() {
 	m.entityMgr.DisposeManager()
 }
 
-func (m *MMOManager) SetServer(server netx.ISockServer) {
+func (m *MMOManager) SetSockServer(server netx.ISockServer) {
 	if nil != m.bcMgr {
-		m.bcMgr.SetServer(server)
+		m.bcMgr.SetSockServer(server)
 	}
 }
 

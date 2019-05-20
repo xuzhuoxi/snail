@@ -9,16 +9,6 @@ import (
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 )
 
-type ISnailInitExtension interface {
-	InitExtension() error
+type ISnailExtension interface {
+	protox.IProtocolExtension
 }
-
-type ISnailSaveExtension interface {
-	SaveExtension() error
-}
-
-type ISnailDestroyExtension interface {
-	DestroyExtension() error
-}
-
-type ISnailExtension = protox.IProtocolExtension

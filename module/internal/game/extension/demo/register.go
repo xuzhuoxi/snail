@@ -11,12 +11,6 @@ import (
 
 func init() {
 	ifc.RegisterExtension(func() ifc.IGameExtension {
-		return NewNoneDemoExtension("NoneDemo")
-	})
-	ifc.RegisterExtension(func() ifc.IGameExtension {
-		return NewBinaryDemoExtension("BinaryDemo")
-	})
-	ifc.RegisterExtension(func() ifc.IGameExtension {
-		return NewObjDemoExtension("ObjDemo")
+		return NewDemoExtension("Demo")
 	})
 }

@@ -6,7 +6,7 @@
 package user
 
 import (
-	"github.com/xuzhuoxi/infra-go/extendx"
+	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/snail/module/internal/game/extension"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"time"
@@ -25,32 +25,41 @@ type LoginExtension struct {
 	extension.GameExtensionSupport
 }
 
-func (e *LoginExtension) InitProtocolId() {
-	e.ProtoIdToValue[LoginId] = struct{}{}
-	e.ProtoIdToValue[ReLoginId] = struct{}{}
-}
-
 func (e *LoginExtension) InitExtension() error {
 	e.GetLogger().Debugln("LoginExtension.InitExtension", e.Name)
+	e.SetRequestHandlerJson(LoginId, e.onRequestLogin)
+	e.SetRequestHandlerJson(ReLoginId, e.onRequestReLogin)
 	return nil
 }
 
-func (e *LoginExtension) OnRequest(resp extendx.IExtensionBinaryResponse, protoId string, uid string, data []byte, data2 ...[]byte) {
-	password := string(data)
-	if e.check(uid, password) {
-		ifc.AddressProxy.MapIdAddress(uid, resp.SenderAddress())
+func (e *LoginExtension) DestroyExtension() error {
+	e.ClearRequestHandler(ReLoginId)
+	e.ClearRequestHandler(LoginId)
+	e.GetLogger().Debugln("LoginExtension.DestroyExtension", e.Name)
+	return nil
+}
+
+func (e *LoginExtension) onRequestLogin(resp protox.IExtensionJsonResponse, req protox.IExtensionJsonRequest) {
+	password := req.RequestJsonData()[0]
+	if e.check(req.ClientId(), password) {
+		ifc.AddressProxy.MapIdAddress(req.ClientId(), req.ClientAddress())
 		time.Sleep(time.Millisecond * 20)
-		switch protoId {
-		case LoginId:
-			break
-		case ReLoginId:
-			break
-		}
-		data := append([]byte(protoId), []byte(uid)...)
-		resp.SendBinaryResponse(data)
-		e.GetLogger().Traceln("LoginExtension.OnRequest:", "Check Succ!", protoId, uid, password, data)
+		resp.SendJsonResponse("ok")
+		e.GetLogger().Traceln("LoginExtension.onRequestLogin:", "Check Succ!", req.ProtoId(), req.ClientId(), password)
 	} else {
-		e.GetLogger().Warnln("LoginExtension.OnRequest:", "Check Fail!", protoId, uid, password)
+		e.GetLogger().Warnln("LoginExtension.onRequestLogin:", "Check Fail!", req.ProtoId(), req.ClientId(), password)
+	}
+}
+
+func (e *LoginExtension) onRequestReLogin(resp protox.IExtensionJsonResponse, req protox.IExtensionJsonRequest) {
+	password := req.RequestJsonData()[0]
+	if e.check(req.ClientId(), password) {
+		ifc.AddressProxy.MapIdAddress(req.ClientId(), req.ClientAddress())
+		time.Sleep(time.Millisecond * 20)
+		resp.SendJsonResponse("ok")
+		e.GetLogger().Traceln("LoginExtension.onRequestReLogin:", "Check Succ!", req.ProtoId(), req.ClientId(), password)
+	} else {
+		e.GetLogger().Warnln("LoginExtension.onRequestReLogin:", "Check Fail!", req.ProtoId(), req.ClientId(), password)
 	}
 }
 
