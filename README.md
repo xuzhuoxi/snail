@@ -124,9 +124,6 @@ You can see [README.md](/module/internal/game/README.md) for the game module.
 ├── conf: 配置解释
 │   ├── conf.go: 与配置相关结构体定义、解释，读取行为
 ├── engine: 引擎库
-│   ├── extension: 扩展支持
-│   │   ├── container.go: 扩展容器接口及基础结构体定义
-│   │   ├── extension.go: 扩展接口及基础结构体定义
 │   ├── mmo: MMO世界支持
 │   │   ├── basis: 接口声明及公共结构体
 │   │   │   ├── channel.go: Channel接口及常量定义，以及相关处理函数
