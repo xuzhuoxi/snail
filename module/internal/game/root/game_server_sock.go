@@ -10,14 +10,13 @@ import (
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/netx"
 	"github.com/xuzhuoxi/snail/conf"
-	"github.com/xuzhuoxi/snail/engine/extension"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"time"
 )
 
 func NewGameSock(conf conf.SockConf, single ifc.IGameSingleCase) *GameSock {
-	container := extension.NewISnailExtensionContainer()
+	container := ifc.NewGameExtensionContainer()
 	injectExtensions(container, single)
 	container.InitExtensions()
 
@@ -28,7 +27,12 @@ func NewGameSock(conf conf.SockConf, single ifc.IGameSingleCase) *GameSock {
 
 	SockState := imodule.NewSockStateDetail(conf.Name, ifc.DefaultStatsInterval)
 
-	mgr := protox.NewExtensionManager()
+	//mgr := protox.NewIExtensionManager()
+	//mgr.InitManager(server, container)
+	//mgr.SetLogger(single.GetLogger())
+	//mgr.SetAddressProxy(ifc.AddressProxy)
+
+	mgr := NewSnailGameExtensionManager(SockState)
 	mgr.InitManager(server, container)
 	mgr.SetLogger(single.GetLogger())
 	mgr.SetAddressProxy(ifc.AddressProxy)

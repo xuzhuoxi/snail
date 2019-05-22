@@ -6,14 +6,14 @@
 package ifc
 
 import (
-	"github.com/xuzhuoxi/snail/engine/extension"
+	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"sync"
 )
 
-type IGameExtensionContainer = extension.ISnailExtensionContainer
+type IGameExtensionContainer = protox.IProtocolExtensionContainer
 
 type IGameExtension interface {
-	extension.ISnailExtension
+	protox.IProtocolExtension
 	IGameSingleCaseSetter
 }
 
@@ -36,4 +36,8 @@ func ForeachExtensionConstructor(eachFunc func(constructor GameExtensionConstruc
 	for _, c := range extConstructors {
 		eachFunc(c)
 	}
+}
+
+func NewGameExtensionContainer() IGameExtensionContainer {
+	return protox.NewIProtocolExtensionContainer()
 }

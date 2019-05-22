@@ -126,18 +126,14 @@ func (m *ModuleRoute) onDisconnected(args *imodule.RPCArgs, reply *imodule.RPCRe
 func (m *ModuleRoute) onUpdateState(args *imodule.RPCArgs, reply *imodule.RPCReply) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	var states []imodule.SockState
+	var state imodule.SockState
 	ifc.HandleBuffDecodeFromPool(func(decoder encodingx.IBuffDecoder) {
-		for index := 0; index < len(args.Data); index++ {
-			decoder.Reset()
-			decoder.WriteBytes(args.Data[index])
-			var state imodule.SockState
-			decoder.DecodeDataFromBuff(&state)
-			states = append(states, state)
-			m.sockCollection.UpdateSockState(state)
-		}
+		decoder.Reset()
+		decoder.WriteBytes(args.Data[0])
+		decoder.DecodeDataFromBuff(&state)
+		m.sockCollection.UpdateSockState(state)
 	})
-	m.Logger.Infoln("ModuleRoute.onUpdateState:", args.From, states)
+	m.Logger.Infoln("ModuleRoute.onUpdateState:", args.From, state)
 	return nil
 }
 

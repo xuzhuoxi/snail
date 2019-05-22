@@ -17,8 +17,8 @@ var (
 )
 
 const (
-	//通知Route间隔
-	GameNotifyRouteInterval = time.Second * 30
+	//通知Route间隔(默认60秒)
+	GameNotifyRouteInterval = time.Second * 60
 	//统计时间区间
 	DefaultStatsInterval = int64(5 * time.Minute)
 )
