@@ -29,6 +29,5 @@ func startCmd(openGo bool) {
 		go module.StartCmdListener()
 	} else {
 		module.StartCmdListener()
-		logx.Infoln("snail.startCmd..........end")
 	}
 }

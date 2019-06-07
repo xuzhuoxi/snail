@@ -18,7 +18,6 @@ import (
 func NewGameSock(conf conf.SockConf, single ifc.IGameSingleCase) *GameSock {
 	container := ifc.NewGameExtensionContainer()
 	injectExtensions(container, single)
-	container.InitExtensions()
 
 	server := netx.NewTCPServer()
 	server.SetName(conf.Name)

@@ -2,8 +2,8 @@ package module
 
 import (
 	"github.com/xuzhuoxi/infra-go/cmdx"
-	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/engine/proxy"
 	"github.com/xuzhuoxi/snail/module/internal"
 	_ "github.com/xuzhuoxi/snail/module/internal/admin"
 	_ "github.com/xuzhuoxi/snail/module/internal/game"
@@ -14,27 +14,27 @@ import (
 
 func StartDefault() {
 	nameList := conf.DefaultConfig.OnList
-	logx.Infoln("module.Start..........", nameList)
+	proxy.SnailLogger.Infoln("module.Start..........", nameList)
 	internal.Start(nameList...)
-	logx.Infoln("module.Start..........end")
+	proxy.SnailLogger.Infoln("module.Start..........end")
 }
 
 func Start(nameList []string) {
-	logx.Infoln("module.Start..........", nameList)
+	proxy.SnailLogger.Infoln("module.Start..........", nameList)
 	internal.Start(nameList...)
-	logx.Infoln("module.Start..........end")
+	proxy.SnailLogger.Infoln("module.Start..........end")
 }
 
 func StopRunning() {
-	logx.Infoln("module.Stop..........")
+	proxy.SnailLogger.Infoln("module.Stop..........")
 	internal.StopAll()
-	logx.Infoln("module.Stop..........end")
+	proxy.SnailLogger.Infoln("module.Stop..........end")
 }
 
 func Stop(nameList []string) {
-	logx.Infoln("module.Stop..........", nameList)
+	proxy.SnailLogger.Infoln("module.Stop..........", nameList)
 	internal.Stop(nameList...)
-	logx.Infoln("module.Stop..........end")
+	proxy.SnailLogger.Infoln("module.Stop..........end")
 }
 
 func StartCmdListener() {

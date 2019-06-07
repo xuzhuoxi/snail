@@ -10,16 +10,25 @@ package internal
 import (
 	"errors"
 	"fmt"
-	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/engine/proxy"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"sync"
 )
 
 type state int
 
+func (s state) String() string {
+	if val, ok := stateDesc[s]; ok {
+		return val
+	} else {
+		return "Unknown"
+	}
+}
+
 const (
-	StateLoaded state = 1 + iota
+	StateDefault = 0 + iota
+	StateInit
 	StateRunning
 	StateStopping
 	StateDestroy
@@ -36,8 +45,8 @@ func (i *internalMod) running() bool {
 	return i.state == StateRunning
 }
 
-func (i *internalMod) infoStr() string {
-	return i.name + "(state=" + stateDesc[i.state] + ",module=" + i.mod.GetConfig().ModuleName + ")"
+func (i *internalMod) String() string {
+	return fmt.Sprintf("{id(name):%s,\tmodule:%s,\tstate:%s,\trunning:%s}", i.name, i.mod.GetModuleName(), i.state.String(), fmt.Sprint(i.running()))
 }
 
 var (
@@ -48,7 +57,8 @@ var (
 )
 
 func init() {
-	stateDesc[StateLoaded] = "StateLoaded"
+	stateDesc[StateDefault] = "StateDefault"
+	stateDesc[StateInit] = "StateInit"
 	stateDesc[StateRunning] = "StateRunning"
 	stateDesc[StateStopping] = "StateStopping"
 	stateDesc[StateDestroy] = "StateDestroy"
@@ -63,7 +73,7 @@ func Start(name ...string) error {
 	list := []*internalMod{}
 	for _, n := range name {
 		if Running(n) {
-			logx.Warnln("ModuleName " + n + "is running!")
+			proxy.SnailLogger.Warnln("ModuleName " + n + "is running!")
 			continue
 		}
 		internal, err := newInternal(n)
@@ -82,7 +92,7 @@ func Stop(name ...string) {
 	var list []*internalMod
 	for _, n := range name {
 		if !Running(n) {
-			logx.Warnln("ModuleName " + n + "is not running!")
+			proxy.SnailLogger.Warnln("ModuleName " + n + "is not running!")
 			continue
 		}
 		list = append(list, modsMap[n])
@@ -112,7 +122,7 @@ func ListInfo(state state) []string {
 	var list []string
 	for _, internal := range mods {
 		if internal.state == state {
-			list = append(list, internal.infoStr())
+			list = append(list, internal.String())
 		}
 	}
 	return list
@@ -156,38 +166,39 @@ func unCacheInternal(internal *internalMod) {
 }
 
 func initModule(m *internalMod) {
-	if m.running() {
+	if m.state != StateDefault && m.state != StateDestroy {
 		return
 	}
-	logx.Infoln(fmt.Sprintf("InitExtension..........[%s]", m.name))
+	proxy.SnailLogger.Infoln(fmt.Sprintf("InitExtension..........[%s]", m.name))
 	m.mod.Init()
+	m.state = StateInit
 }
 
 func runModule(m *internalMod) {
-	if m.running() {
+	if m.state != StateInit {
 		return
 	}
-	logx.Infoln(fmt.Sprintf("Run...........[%s]", m.name))
+	proxy.SnailLogger.Infoln(fmt.Sprintf("Run...........[%s]", m.name))
 	go m.mod.Run()
 	m.state = StateRunning
 }
 
 func onDestroyModule(m *internalMod) {
-	if !m.running() {
+	if m.state != StateRunning {
 		return
 	}
-	logx.Infoln(fmt.Sprintf("OnDestroy.....[%s]", m.name))
-	m.state = StateStopping
 	m.mod.OnDestroy()
+	m.state = StateStopping
+	proxy.SnailLogger.Infoln(fmt.Sprintf("OnDestroy.....[%s]", m.name))
 }
 
 func destroyModule(m *internalMod) {
-	if !m.running() {
+	if m.state != StateStopping {
 		return
 	}
-	logx.Infoln(fmt.Sprintf("Destroy.......[%s]", m.name))
 	m.mod.Destroy()
 	m.state = StateDestroy
+	proxy.SnailLogger.Infoln(fmt.Sprintf("Destroy.......[%s]", m.name))
 }
 
 //---------------------------------------
