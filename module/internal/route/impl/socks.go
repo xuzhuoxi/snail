@@ -7,7 +7,7 @@ package impl
 
 import (
 	"fmt"
-	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/route/ifc"
 	"sort"
@@ -24,7 +24,7 @@ func newSockCollection() iSockCollection {
 type sock struct {
 	imodule.SockOwner
 
-	conf.SockConf
+	config.SockConf
 	imodule.SockState
 
 	lastTimestamp int64

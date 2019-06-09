@@ -2,7 +2,7 @@ package imodule
 
 import (
 	"github.com/xuzhuoxi/infra-go/logx"
-	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/module/config"
 )
 
 type IModule interface {
@@ -18,15 +18,15 @@ type IModule interface {
 type IBaseModule interface {
 	GetId() string
 	GetModuleName() string
-	GetConfig() conf.ObjectConf
-	SetConfig(config conf.ObjectConf)
+	GetConfig() config.ObjectConf
+	SetConfig(config config.ObjectConf)
 	GetLogger() logx.ILogger
 }
 
 //ModuleBase-------------------------------------------
 
 type ModuleBase struct {
-	cfg    conf.ObjectConf
+	cfg    config.ObjectConf
 	Logger logx.ILogger
 }
 
@@ -38,11 +38,11 @@ func (m *ModuleBase) GetModuleName() string {
 	return m.cfg.ModuleName
 }
 
-func (m *ModuleBase) GetConfig() conf.ObjectConf {
+func (m *ModuleBase) GetConfig() config.ObjectConf {
 	return m.cfg
 }
 
-func (m *ModuleBase) SetConfig(config conf.ObjectConf) {
+func (m *ModuleBase) SetConfig(config config.ObjectConf) {
 	m.cfg = config
 	m.updateLog()
 }

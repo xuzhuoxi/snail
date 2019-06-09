@@ -5,7 +5,7 @@ import (
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/route/ifc"
 	"net/http"
@@ -74,7 +74,7 @@ func (m *ModuleRoute) runRPCServices() {
 
 func (m *ModuleRoute) runForeignServices() {
 	serviceName := m.GetConfig().SockList[0]
-	service, ok := conf.GetServiceConf(serviceName)
+	service, ok := config.GetServiceConf(serviceName)
 	if !ok {
 		panic("Service Undefined :" + serviceName)
 	}
@@ -98,9 +98,9 @@ func (m *ModuleRoute) onConnected(args *imodule.RPCArgs, reply *imodule.RPCReply
 		var owner imodule.SockOwner
 		decoder.DecodeDataFromBuff(&owner)
 		for index := 1; index < len(args.Data); index++ {
-			var conf conf.SockConf
-			decoder.DecodeDataFromBuff(&conf)
-			server := &sock{SockOwner: owner, SockConf: conf, SockState: imodule.SockState{SockName: conf.Name}, lastTimestamp: time.Now().UnixNano()}
+			var cfg config.SockConf
+			decoder.DecodeDataFromBuff(&cfg)
+			server := &sock{SockOwner: owner, SockConf: cfg, SockState: imodule.SockState{SockName: cfg.Name}, lastTimestamp: time.Now().UnixNano()}
 			servers = append(servers, *server)
 			m.sockCollection.AddSock(server)
 		}

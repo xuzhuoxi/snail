@@ -9,22 +9,22 @@ import (
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"time"
 )
 
-func NewGameSock(conf conf.SockConf, single ifc.IGameSingleCase) *GameSock {
+func NewGameSock(cfg config.SockConf, single ifc.IGameSingleCase) *GameSock {
 	container := ifc.NewGameExtensionContainer()
 	injectExtensions(container, single)
 
 	server := netx.NewTCPServer()
-	server.SetName(conf.Name)
+	server.SetName(cfg.Name)
 	server.SetMax(100)
 	server.SetLogger(single.GetLogger())
 
-	SockState := imodule.NewSockStateDetail(conf.Name, ifc.DefaultStatsInterval)
+	SockState := imodule.NewSockStateDetail(cfg.Name, ifc.DefaultStatsInterval)
 
 	//mgr := protox.NewIExtensionManager()
 	//mgr.InitManager(server, container)
@@ -36,11 +36,11 @@ func NewGameSock(conf conf.SockConf, single ifc.IGameSingleCase) *GameSock {
 	mgr.SetLogger(single.GetLogger())
 	mgr.SetAddressProxy(ifc.AddressProxy)
 
-	return &GameSock{Conf: conf, Server: server, Container: container, SockStateDetail: SockState, ExtensionMgr: mgr}
+	return &GameSock{Conf: cfg, Server: server, Container: container, SockStateDetail: SockState, ExtensionMgr: mgr}
 }
 
 type GameSock struct {
-	Conf            conf.SockConf
+	Conf            config.SockConf
 	Server          netx.ITCPServer
 	Container       ifc.IGameExtensionContainer
 	ExtensionMgr    protox.IExtensionManager

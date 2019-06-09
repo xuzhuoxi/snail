@@ -1,13 +1,10 @@
-package conf
+package config
 
 import (
-	"flag"
 	"github.com/json-iterator/go"
+	"github.com/xuzhuoxi/infra-go/cmdx"
 	"github.com/xuzhuoxi/infra-go/osxu"
 	"io/ioutil"
-	"log"
-	"os"
-	"path/filepath"
 )
 
 func BaseLogPath() string {
@@ -28,7 +25,7 @@ type ObjectConf struct {
 	Remotes    []string `json:"remotes,omitempty"`
 	Log        string   `json:"log,omitempty"`
 
-	conf *Conf
+	conf *ModuleConfig
 }
 
 func (oc ObjectConf) LogFileInfo() (fileDir string, fileBaseName string, fileExtName string) {
@@ -43,7 +40,7 @@ func (c ObjectConf) GetServiceConf(name string) (SockConf, bool) {
 	return c.conf.GetServiceConf(name)
 }
 
-type Conf struct {
+type ModuleConfig struct {
 	Socks  []SockConf   `json:"socks,omitempty"`
 	Routes []ObjectConf `json:"routes,omitempty"`
 	Admins []ObjectConf `json:"admins,omitempty"`
@@ -54,7 +51,7 @@ type Conf struct {
 	mapObject  map[string]ObjectConf
 }
 
-func (c *Conf) GetServiceConf(name string) (SockConf, bool) {
+func (c *ModuleConfig) GetServiceConf(name string) (SockConf, bool) {
 	rs, has := c.mapService[name]
 	if has {
 		return rs, true
@@ -62,7 +59,7 @@ func (c *Conf) GetServiceConf(name string) (SockConf, bool) {
 	return SockConf{}, false
 }
 
-func (c *Conf) GetObjectById(id string) (ObjectConf, bool) {
+func (c *ModuleConfig) GetObjectById(id string) (ObjectConf, bool) {
 	val, has := c.mapObject[id]
 	if has {
 		return val, true
@@ -70,7 +67,7 @@ func (c *Conf) GetObjectById(id string) (ObjectConf, bool) {
 	return ObjectConf{}, false
 }
 
-func (c *Conf) handleData() {
+func (c *ModuleConfig) handleData() {
 	c.mapService = make(map[string]SockConf)
 	for _, val := range c.Socks {
 		c.mapService[val.Name] = val
@@ -94,30 +91,30 @@ func (c *Conf) handleData() {
 	objectToMap(c.mapObject, c.Admins)
 }
 
-var DefaultConfig *Conf
+//--------------------------------------------------------------
 
-func ParseConfig(configName string) *Conf {
-	//读取运行参数配置文件
-	var c = flag.String("c", configName, "GetConfig osxu for running")
-	flag.Parse()
-	//取当前运行路径
-	basePath := filepath.Dir(os.Args[0])
-	//读取配置文件
-	cfgBody, err := ioutil.ReadFile(basePath + "/conf/" + *c)
-	if nil != err {
-		log.Fatal(err)
-		return nil
+var DefaultModuleConfig *ModuleConfig
+
+func ParseModuleConfig(flagSet *cmdx.FlagSetExtend) *ModuleConfig {
+	cfgName, ok := flagSet.GetString("c")
+	if !ok {
+		panic("Params \"-c\" is required! ")
 	}
-	cfg := &Conf{}
+	//读取配置文件
+	cfgBody, err := ioutil.ReadFile(osxu.RunningBaseDir() + "/conf/" + cfgName)
+	if nil != err {
+		panic("Config does not exist! ")
+	}
+	cfg := &ModuleConfig{}
 	jsoniter.Unmarshal(cfgBody, cfg)
 	cfg.handleData()
 	return cfg
 }
 
 func GetServiceConf(name string) (SockConf, bool) {
-	return DefaultConfig.GetServiceConf(name)
+	return DefaultModuleConfig.GetServiceConf(name)
 }
 
 func GetObjectById(name string) (ObjectConf, bool) {
-	return DefaultConfig.GetObjectById(name)
+	return DefaultModuleConfig.GetObjectById(name)
 }

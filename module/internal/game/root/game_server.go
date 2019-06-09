@@ -8,11 +8,11 @@ package root
 import (
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
 
-func NewGameServer(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *GameServer {
+func NewGameServer(config config.ObjectConf, singleCase ifc.IGameSingleCase) *GameServer {
 	s := &GameServer{}
 	s.config = config
 	s.SingleCase = singleCase
@@ -21,7 +21,7 @@ func NewGameServer(config conf.ObjectConf, singleCase ifc.IGameSingleCase) *Game
 
 type GameServer struct {
 	eventx.EventDispatcher
-	config     conf.ObjectConf
+	config     config.ObjectConf
 	SingleCase ifc.IGameSingleCase
 	GameSocks  []*GameSock
 }

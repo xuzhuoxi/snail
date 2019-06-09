@@ -10,8 +10,8 @@ package internal
 import (
 	"errors"
 	"fmt"
-	"github.com/xuzhuoxi/snail/conf"
-	"github.com/xuzhuoxi/snail/engine/proxy"
+	"github.com/xuzhuoxi/snail/engine"
+	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"sync"
 )
@@ -73,7 +73,7 @@ func Start(name ...string) error {
 	list := []*internalMod{}
 	for _, n := range name {
 		if Running(n) {
-			proxy.SnailLogger.Warnln("ModuleName " + n + "is running!")
+			engine.SnailLogger.Warnln("ModuleName " + n + "is running!")
 			continue
 		}
 		internal, err := newInternal(n)
@@ -92,7 +92,7 @@ func Stop(name ...string) {
 	var list []*internalMod
 	for _, n := range name {
 		if !Running(n) {
-			proxy.SnailLogger.Warnln("ModuleName " + n + "is not running!")
+			engine.SnailLogger.Warnln("ModuleName " + n + "is not running!")
 			continue
 		}
 		list = append(list, modsMap[n])
@@ -131,7 +131,7 @@ func ListInfo(state state) []string {
 //-------------------------------------
 
 func newInternal(name string) (*internalMod, error) {
-	c, has := conf.GetObjectById(name)
+	c, has := config.GetObjectById(name)
 	if !has {
 		return nil, errors.New("No ModuleName Config :" + name)
 	}
@@ -169,7 +169,7 @@ func initModule(m *internalMod) {
 	if m.state != StateDefault && m.state != StateDestroy {
 		return
 	}
-	proxy.SnailLogger.Infoln(fmt.Sprintf("InitExtension..........[%s]", m.name))
+	engine.SnailLogger.Infoln(fmt.Sprintf("InitExtension..........[%s]", m.name))
 	m.mod.Init()
 	m.state = StateInit
 }
@@ -178,7 +178,7 @@ func runModule(m *internalMod) {
 	if m.state != StateInit {
 		return
 	}
-	proxy.SnailLogger.Infoln(fmt.Sprintf("Run...........[%s]", m.name))
+	engine.SnailLogger.Infoln(fmt.Sprintf("Run...........[%s]", m.name))
 	go m.mod.Run()
 	m.state = StateRunning
 }
@@ -189,7 +189,7 @@ func onDestroyModule(m *internalMod) {
 	}
 	m.mod.OnDestroy()
 	m.state = StateStopping
-	proxy.SnailLogger.Infoln(fmt.Sprintf("OnDestroy.....[%s]", m.name))
+	engine.SnailLogger.Infoln(fmt.Sprintf("OnDestroy.....[%s]", m.name))
 }
 
 func destroyModule(m *internalMod) {
@@ -198,7 +198,7 @@ func destroyModule(m *internalMod) {
 	}
 	m.mod.Destroy()
 	m.state = StateDestroy
-	proxy.SnailLogger.Infoln(fmt.Sprintf("Destroy.......[%s]", m.name))
+	engine.SnailLogger.Infoln(fmt.Sprintf("Destroy.......[%s]", m.name))
 }
 
 //---------------------------------------

@@ -6,18 +6,18 @@ import (
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
-	"github.com/xuzhuoxi/snail/conf"
+	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 	"sync"
 	"time"
 )
 
-func NewGameStatus(config conf.ObjectConf, singleCase ifc.IGameSingleCase, server *GameServer) *GameStatus {
-	gameId := config.Id
+func NewGameStatus(cfg config.ObjectConf, singleCase ifc.IGameSingleCase, server *GameServer) *GameStatus {
+	gameId := cfg.Id
 	return &GameStatus{
 		gameId:        gameId,
-		config:        config,
+		config:        cfg,
 		singleCase:    singleCase,
 		server:        server,
 		linkingServer: make(map[string]struct{}),
@@ -26,7 +26,7 @@ func NewGameStatus(config conf.ObjectConf, singleCase ifc.IGameSingleCase, serve
 
 type GameStatus struct {
 	gameId     string
-	config     conf.ObjectConf
+	config     config.ObjectConf
 	singleCase ifc.IGameSingleCase
 
 	server        *GameServer
@@ -85,7 +85,7 @@ func (s *GameStatus) notifyConnected(gs *GameSock) {
 		encoder.EncodeDataToBuff(owner)
 		data = append(data, encoder.ReadBytes()) //[0]
 
-		sockConf := gs.Conf //conf.SockConf
+		sockConf := gs.Conf //config.SockConf
 		encoder.EncodeDataToBuff(sockConf)
 		data = append(data, encoder.ReadBytes()) //[n]
 
