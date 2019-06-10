@@ -1,12 +1,14 @@
 package config
 
 import (
-	"github.com/xuzhuoxi/snail/engine"
+	"github.com/xuzhuoxi/infra-go/osxu"
 	"log"
 	"testing"
 )
 
-func TestParseConfig(t *testing.T) {
-	conf := ParseModuleConfig(engine.DefaultFlagSet)
+var path = osxu.RunningBaseDir() + "conf/config_module.json"
+
+func TestParseModuleConfig(t *testing.T) {
+	conf := ParseModuleConfigByPath(path)
 	log.Println(conf)
 }

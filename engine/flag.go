@@ -20,15 +20,15 @@ func GetDefaultFlagSet() *cmdx.FlagSetExtend {
 	flagSetMu.Lock()
 	defer flagSetMu.Unlock()
 	if nil == flagSet {
-		flagSet = ParseFlag("config.json", "config_mmo.json")
+		flagSet = ParseFlag()
 	}
 	return flagSet
 }
 
-func ParseFlag(config string, mmo string) *cmdx.FlagSetExtend {
+func ParseFlag() *cmdx.FlagSetExtend {
 	flagSet := cmdx.NewDefaultFlagSetExtend()
-	flagSet.String("c", config, "Base Config! ")
-	flagSet.String("mmo", mmo, "MMO config! ")
+	flagSet.String("c", "config_module.json", "Base Config! ")
+	flagSet.String("mmo", "config_mmo.json", "MMO config! ")
 	flagSet.Parse(os.Args[1:])
 	return flagSet
 }
