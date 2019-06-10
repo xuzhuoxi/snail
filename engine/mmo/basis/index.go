@@ -19,20 +19,6 @@ type IEntityIndex interface {
 	Update(entity IEntity) error
 }
 
-type IWorldIndex interface {
-	IEntityIndex
-	//检查World是否存在
-	CheckWorld(worldId string) bool
-	//获取World
-	GetWorld(worldId string) IWorldEntity
-	//添加一个新World到索引中
-	AddWorld(world IWorldEntity) error
-	//从索引中移除一个World
-	RemoveWorld(worldId string) (IWorldEntity, error)
-	//更新一个新World到索引中
-	UpdateWorld(zone IWorldEntity) error
-}
-
 type IZoneIndex interface {
 	IEntityIndex
 	//检查Zone是否存在

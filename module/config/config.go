@@ -100,21 +100,13 @@ func ParseModuleConfig(flagSet *cmdx.FlagSetExtend) *ModuleConfig {
 	if !ok {
 		panic("Params \"-c\" is required! ")
 	}
-	path := osxu.RunningBaseDir() + "conf/" + cfgName
-	return ParseModuleConfigByPath(path)
-}
-
-func ParseModuleConfigByPath(path string) *ModuleConfig {
-	cfgBody, err := ioutil.ReadFile(path)
+	//读取配置文件
+	cfgBody, err := ioutil.ReadFile(osxu.RunningBaseDir() + "/conf/" + cfgName)
 	if nil != err {
 		panic("Config does not exist! ")
 	}
-	return ParseModuleConfigByContent(cfgBody)
-}
-
-func ParseModuleConfigByContent(content []byte) *ModuleConfig {
 	cfg := &ModuleConfig{}
-	jsoniter.Unmarshal(content, cfg)
+	jsoniter.Unmarshal(cfgBody, cfg)
 	cfg.handleData()
 	return cfg
 }

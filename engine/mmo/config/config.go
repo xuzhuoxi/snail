@@ -6,7 +6,6 @@
 package config
 
 import (
-	"errors"
 	"github.com/json-iterator/go"
 	"github.com/xuzhuoxi/infra-go/cmdx"
 	"github.com/xuzhuoxi/infra-go/osxu"
@@ -40,24 +39,16 @@ type MMO struct {
 	entityMap    map[string]*Entity
 }
 
-func (m *MMO) GetEntity(entityId string) (entity *Entity, ok bool) {
-	entity, ok = m.entityMap[entityId]
-	return
-}
-
 type MMOConfig struct {
 	Entities Entities `json:"entities"`
 	MMO      MMO      `json:"mmo"`
 }
 
 func (c *MMOConfig) HandleData() {
-	eMap, err := c.cacheEntityMap()
-	if nil != err {
-		panic(err.Error())
-	}
+	eMap := c.cacheEntityMap()
 	c.MMO.entityMap = eMap
-	world, zones, rooms, isErr, errorId := c.makeGroup()
-	if isErr {
+	world, zones, rooms, err, errorId := c.makeGroup()
+	if err {
 		panic("Entity Undefined: " + errorId)
 	}
 	c.MMO.WorldEntity = world
@@ -65,27 +56,18 @@ func (c *MMOConfig) HandleData() {
 	c.MMO.RoomEntities = rooms
 }
 
-func (c *MMOConfig) cacheEntityMap() (eMap map[string]*Entity, err error) {
-	eMap = make(map[string]*Entity)
-	cache2map := func(eMap map[string]*Entity, entity *Entity) error {
-		if _, ok := eMap[entity.Id]; ok {
-			return errors.New("Entity duplicate definition at id:" + entity.Id)
-		}
-		eMap[entity.Id] = entity
-		return nil
+func (c *MMOConfig) cacheEntityMap() map[string]*Entity {
+	eMap := make(map[string]*Entity)
+	for index, _ := range c.Entities.Worlds {
+		eMap[c.Entities.Worlds[index].Id] = &c.Entities.Worlds[index]
 	}
-	cacheList := func(eMap map[string]*Entity, list []Entity) error {
-		for index, _ := range list {
-			err := cache2map(eMap, &list[index])
-			if nil != err {
-				return err
-			}
-		}
-		return nil
+	for index, _ := range c.Entities.Zones {
+		eMap[c.Entities.Zones[index].Id] = &c.Entities.Zones[index]
 	}
-	list := append(append(c.Entities.Worlds, c.Entities.Zones...), c.Entities.Rooms...)
-	err = cacheList(eMap, list)
-	return
+	for index, _ := range c.Entities.Rooms {
+		eMap[c.Entities.Rooms[index].Id] = &c.Entities.Rooms[index]
+	}
+	return eMap
 }
 
 func (c *MMOConfig) makeGroup() (world *Entity, zones []*Entity, rooms []*Entity, err bool, errorId string) {
@@ -118,27 +100,18 @@ func (c *MMOConfig) makeGroup() (world *Entity, zones []*Entity, rooms []*Entity
 
 var DefaultMMOConfig *MMOConfig
 
-func ParseMMOConfigByFlag(flagSet *cmdx.FlagSetExtend) *MMOConfig {
+func ParseMMOConfig(flagSet *cmdx.FlagSetExtend) *MMOConfig {
 	if !flagSet.CheckKey("mmo") {
 		return nil
 	}
 	cfgName, _ := flagSet.GetString("mmo")
-	path := osxu.RunningBaseDir() + "conf/" + cfgName
-	return ParseMMOConfigByPath(path)
-}
-
-func ParseMMOConfigByPath(path string) *MMOConfig {
 	//读取配置文件
-	cfgBody, err := ioutil.ReadFile(path)
+	cfgBody, err := ioutil.ReadFile(osxu.RunningBaseDir() + "/conf/" + cfgName)
 	if nil != err {
 		panic("mmo does not exist! ")
 	}
-	return ParseMMOConfigByContent(cfgBody)
-}
-
-func ParseMMOConfigByContent(content []byte) *MMOConfig {
 	mmoCfg := &MMOConfig{}
-	jsoniter.Unmarshal(content, mmoCfg)
+	jsoniter.Unmarshal(cfgBody, mmoCfg)
 	mmoCfg.HandleData()
 	return mmoCfg
 }
