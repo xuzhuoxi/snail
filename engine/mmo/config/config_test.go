@@ -1,12 +1,14 @@
 package config
 
 import (
-	"log"
+	"fmt"
+	"github.com/xuzhuoxi/infra-go/osxu"
 	"testing"
 )
 
+var path = osxu.RunningBaseDir() + "conf/config_mmo.json"
+
 func TestParseMMOConfig(t *testing.T) {
-	mmoCfg := ParseMMOConfig()
-	mmoCfg.HandleData()
-	log.Println(mmoCfg)
+	cfg := ParseMMOConfigByPath(path)
+	fmt.Println(*cfg)
 }

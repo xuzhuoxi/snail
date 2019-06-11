@@ -11,6 +11,7 @@ import (
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/snail/engine/mmo/basis"
+	"github.com/xuzhuoxi/snail/engine/mmo/config"
 	"github.com/xuzhuoxi/snail/engine/mmo/entity"
 	"github.com/xuzhuoxi/snail/engine/mmo/index"
 	"sync"
@@ -18,11 +19,11 @@ import (
 
 type IEntityCreator interface {
 	//构造世界
-	InitWorld(worldId string, worldName string) (basis.IWorldEntity, error)
+	CreateWorld(worldId string, worldName string, asRoot bool) (basis.IWorldEntity, error)
 	//构造区域
-	CreateZone(zoneId string, zoneName string) (basis.IZoneEntity, error)
+	CreateZoneAt(zoneId string, zoneName string, container basis.IEntityContainer) (basis.IZoneEntity, error)
 	//构造房间
-	CreateRoomAt(roomId string, roomName string, ownerId string) (basis.IRoomEntity, error)
+	CreateRoomAt(roomId string, roomName string, container basis.IEntityContainer) (basis.IRoomEntity, error)
 
 	//创建队伍
 	CreateTeam(userId string) (basis.ITeamEntity, error)
@@ -65,7 +66,9 @@ type IEntityManager interface {
 	IEntityGetter
 	IEntityIndexSet
 	basis.IManagerBase
+
 	World() basis.IWorldEntity
+	ConstructWorld(cfg *config.MMOConfig)
 }
 
 func NewIEntityManager() IEntityManager {
@@ -73,12 +76,22 @@ func NewIEntityManager() IEntityManager {
 }
 
 func NewEntityManager() IEntityManager {
-	return &EntityManager{logger: logx.DefaultLogger()}
+	rs := &EntityManager{logger: logx.DefaultLogger()}
+	rs.worldIndex = index.NewIWorldIndex()
+	rs.zoneIndex = index.NewIZoneIndex()
+	rs.roomIndex = index.NewIRoomIndex()
+	rs.userIndex = index.NewIUserIndex()
+	rs.teamIndex = index.NewITeamIndex()
+	rs.teamCorpsIndex = index.NewITeamCorpsIndex()
+	rs.channelIndex = index.NewIChannelIndex()
+	return rs
 }
 
 //----------------------------
 
 type EntityManager struct {
+	worldIndex       basis.IWorldIndex
+	worldIndexMu     sync.RWMutex
 	zoneIndex        basis.IZoneIndex
 	zoneIndexMu      sync.RWMutex
 	roomIndex        basis.IRoomIndex
@@ -109,54 +122,68 @@ func (m *EntityManager) SetLogger(logger logx.ILogger) {
 	m.logger = logger
 }
 
-func (m *EntityManager) InitWorld(worldId string, worldName string) (basis.IWorldEntity, error) {
-	if nil != m.rootWorld {
-		return nil, errors.New("World is exist. ")
+func (m *EntityManager) ConstructWorld(cfg *config.MMOConfig) {
+	mmo := cfg.MMO
+	world, _ := m.CreateWorld(mmo.WorldEntity.Id, mmo.WorldEntity.Name, true)
+	for _, zoneCfg := range mmo.Zones {
+		z, _ := mmo.GetEntity(zoneCfg.ZoneId)
+		zone, _ := m.CreateZoneAt(z.Id, z.Name, world)
+		for _, roomId := range zoneCfg.Rooms {
+			r, _ := mmo.GetEntity(roomId)
+			m.CreateRoomAt(r.Id, r.Name, zone)
+		}
 	}
-	m.rootWorld = entity.CreateWorldEntity(worldId, worldName)
-	m.rootWorld.InitEntity()
-	m.addEntityEventListener(m.rootWorld)
-	m.zoneIndex = index.NewIZoneIndex()
-	m.roomIndex = index.NewIRoomIndex()
-	m.userIndex = index.NewIUserIndex()
-	m.teamIndex = index.NewITeamIndex()
-	m.teamCorpsIndex = index.NewITeamCorpsIndex()
-	m.channelIndex = index.NewIChannelIndex()
-	return m.rootWorld, nil
 }
 
-func (m *EntityManager) CreateZone(zoneId string, zoneName string) (basis.IZoneEntity, error) {
+func (m *EntityManager) CreateWorld(worldId string, worldName string, asRoot bool) (basis.IWorldEntity, error) {
+	m.worldIndexMu.Lock()
+	defer m.worldIndexMu.Unlock()
+	if m.worldIndex.CheckWorld(worldId) {
+		return nil, errors.New("EntityManager.CreateWorld Error: WorldId(" + worldId + ") Duplicate!")
+	}
+	world := entity.CreateWorldEntity(worldId, worldName)
+	world.InitEntity()
+	m.addEntityEventListener(world)
+	if asRoot {
+		m.rootWorld = world
+	}
+	return world, nil
+}
+
+func (m *EntityManager) CreateZoneAt(zoneId string, zoneName string, container basis.IEntityContainer) (basis.IZoneEntity, error) {
 	m.zoneIndexMu.Lock()
 	defer m.zoneIndexMu.Unlock()
 	if m.zoneIndex.CheckZone(zoneId) {
-		return nil, errors.New("EntityManager.CreateZone Error: ZoneId(" + zoneId + ") Duplicate!")
+		return nil, errors.New("EntityManager.CreateZoneAt Error: ZoneId(" + zoneId + ") Duplicate!")
 	}
 	zone := entity.NewIZoneEntity(zoneId, zoneName)
 	zone.InitEntity()
 	m.addEntityEventListener(zone)
 	m.zoneIndex.AddZone(zone)
-	zone.SetParent(m.rootWorld.UID())
-	m.rootWorld.AddChild(zone)
+	if nil != container {
+		if e, ok := container.(basis.IEntity); ok {
+			zone.SetParent(e.UID())
+			container.AddChild(zone)
+		}
+	}
 	return zone, nil
 }
 
-func (m *EntityManager) CreateRoomAt(roomId string, roomName string, ownerId string) (basis.IRoomEntity, error) {
+func (m *EntityManager) CreateRoomAt(roomId string, roomName string, container basis.IEntityContainer) (basis.IRoomEntity, error) {
 	m.roomIndexMu.Lock()
 	defer m.roomIndexMu.Unlock()
 	if m.roomIndex.CheckRoom(roomId) {
 		return nil, errors.New("EntityManager.CreateRoomAt Error: RoomId(" + roomId + ") Duplicate")
 	}
-	if "" != ownerId && !m.zoneIndex.CheckZone(ownerId) {
-		return nil, errors.New("EntityManager.CreateRoomAt Error: OwnerId(" + ownerId + ") does not exist")
-	}
 	room := entity.NewIRoomEntity(roomId, roomName)
 	room.InitEntity()
 	m.addEntityEventListener(room)
 	m.roomIndex.AddRoom(room)
-	room.SetParent(ownerId)
-	if "" != ownerId {
-		zone := m.zoneIndex.GetZone(ownerId)
-		zone.AddChild(room)
+	if nil != container {
+		if e, ok := container.(basis.IEntity); ok {
+			room.SetParent(e.UID())
+			container.AddChild(room)
+		}
 	}
 	return room, nil
 }
