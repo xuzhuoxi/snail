@@ -21,7 +21,4 @@ func TestEntityType(t *testing.T) {
 	fmt.Println(EntityWorld.Include(EntityAll))
 	fmt.Println(EntityWorld.Include(EntityZone))
 	fmt.Println(EntityWorld.Include(EntityNone))
-
-	var entity IEntity
-	fmt.Println(entity.(IUserEntity))
 }

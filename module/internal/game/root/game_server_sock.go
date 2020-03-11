@@ -74,7 +74,7 @@ func (gs *GameSock) SockRun() {
 	gs.Server.AddEventListener(netx.ServerEventConnOpened, gs.onConnOpened)
 	gs.Server.AddEventListener(netx.ServerEventConnClosed, gs.onConnClosed)
 	gs.ExtensionMgr.StartManager()
-	gs.Server.StartServer(netx.SockParams{Network: gs.Conf.Network, LocalAddress: gs.Conf.Addr}) //这里会阻塞
+	gs.Server.StartServer(netx.SockParams{Network: netx.ParseSockNetwork(gs.Conf.Network), LocalAddress: gs.Conf.Addr}) //这里会阻塞
 }
 
 func (gs *GameSock) SockStop() {
