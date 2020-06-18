@@ -8,6 +8,7 @@ package root
 import (
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/netx"
+	"github.com/xuzhuoxi/infra-go/netx/tcpx"
 	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
 )
@@ -58,7 +59,7 @@ func (s *GameServer) StopServer() {
 
 func (s *GameServer) onSockServerStart(evd *eventx.EventData) {
 	//fmt.Println(s.config.Id, "GameServer.onSockServerStart")
-	server := evd.CurrentTarget().(netx.ITCPServer)
+	server := evd.CurrentTarget.(tcpx.ITCPServer)
 	gs, ok := s.getGameSock(server.GetName())
 	if ok {
 		s.DispatchEvent(netx.ServerEventStart, s, gs)
@@ -67,7 +68,7 @@ func (s *GameServer) onSockServerStart(evd *eventx.EventData) {
 
 func (s *GameServer) onSockServerStop(evd *eventx.EventData) {
 	//fmt.Println("GameServer.onSockServerStop")
-	server := evd.CurrentTarget().(netx.ITCPServer)
+	server := evd.CurrentTarget.(tcpx.ITCPServer)
 	s.DispatchEvent(netx.ServerEventStop, s, server.GetName())
 }
 

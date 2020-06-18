@@ -107,7 +107,7 @@ func ParseModuleConfig(flagSet *cmdx.FlagSetExtend) *ModuleConfig {
 func ParseModuleConfigByPath(path string) *ModuleConfig {
 	cfgBody, err := ioutil.ReadFile(path)
 	if nil != err {
-		panic("Config does not exist! ")
+		panic("Config does not exist: " + path)
 	}
 	return ParseModuleConfigByContent(cfgBody)
 }
