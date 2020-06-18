@@ -33,7 +33,7 @@ func NewGameSock(cfg config.SockConf, single ifc.IGameSingleCase) *GameSock {
 	//mgr.SetAddressProxy(ifc.AddressProxy)
 
 	mgr := NewSnailGameExtensionManager(SockState)
-	mgr.InitManager(server, container)
+	mgr.InitManager(server.GetPackHandlerContainer(), container, server)
 	mgr.SetLogger(single.GetLogger())
 	mgr.SetAddressProxy(ifc.AddressProxy)
 
