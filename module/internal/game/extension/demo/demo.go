@@ -20,26 +20,26 @@ type originObj struct {
 	Data2 string
 }
 
-type paramHander struct {
+type paramHandler struct {
 }
 
-func (h *paramHander) SetCodingHandler(handler encodingx.ICodingHandler) {
+func (h *paramHandler) SetCodingHandler(handler encodingx.ICodingHandler) {
 	panic("implement me")
 }
 
-func (h *paramHander) HandleRequestParam(data []byte) interface{} {
+func (h *paramHandler) HandleRequestParam(data []byte) interface{} {
 	panic("implement me")
 }
 
-func (h *paramHander) HandleRequestParams(data [][]byte) []interface{} {
+func (h *paramHandler) HandleRequestParams(data [][]byte) []interface{} {
 	panic("implement me")
 }
 
-func (h *paramHander) HandleResponseParam(data interface{}) []byte {
+func (h *paramHandler) HandleResponseParam(data interface{}) []byte {
 	panic("implement me")
 }
 
-func (h *paramHander) HandleResponseParams(data []interface{}) [][]byte {
+func (h *paramHandler) HandleResponseParams(data []interface{}) [][]byte {
 	panic("implement me")
 }
 
@@ -56,7 +56,7 @@ func (e *DemoExtension) InitExtension() error {
 	e.SetRequestHandler("N_0", e.onRequestNoneParam)
 	e.SetRequestHandlerBinary("B_0", e.onRequestBinary)
 	e.SetRequestHandlerJson("J_0", e.onRequestJson)
-	e.SetRequestHandlerObject("Obj_0", e.onRequestObj, originObj{}, &paramHander{})
+	e.SetRequestHandlerObject("Obj_0", e.onRequestObj, originObj{}, &paramHandler{})
 	return nil
 }
 
