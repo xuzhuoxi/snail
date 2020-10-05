@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-var path = osxu.RunningBaseDir() + "conf/config_mmo.json"
+var path = osxu.GetRunningDir() + "/conf/config_mmo.json"
 
 func TestEntityManager_ConstructWorld(t *testing.T) {
 	cfg := config.ParseMMOConfigByPath(path)

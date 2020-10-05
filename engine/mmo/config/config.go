@@ -123,7 +123,7 @@ func ParseMMOConfigByFlag(flagSet *cmdx.FlagSetExtend) *MMOConfig {
 		return nil
 	}
 	cfgName, _ := flagSet.GetString("mmo")
-	path := osxu.RunningBaseDir() + "conf/" + cfgName
+	path := osxu.GetRunningDir() + "/conf/" + cfgName
 	return ParseMMOConfigByPath(path)
 }
 

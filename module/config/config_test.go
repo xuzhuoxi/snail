@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var path = osxu.RunningBaseDir() + "conf/config_module.json"
+var path = osxu.GetRunningDir() + "/conf/config_module.json"
 
 func TestParseModuleConfig(t *testing.T) {
 	conf := ParseModuleConfigByPath(path)
