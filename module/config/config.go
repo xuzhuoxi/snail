@@ -34,7 +34,7 @@ func (oc ObjectConf) LogFileInfo() (fileDir string, fileBaseName string, fileExt
 	fullPath := filex.Combine(BaseLogPath, oc.Log)
 	var fileName string
 	fileDir, fileName = filex.Split(fullPath)
-	fileBaseName, fileExtName = filex.SplitFileName(fileName, false)
+	fileBaseName, _, fileExtName = filex.SplitFileName(fileName)
 	return
 }
 
