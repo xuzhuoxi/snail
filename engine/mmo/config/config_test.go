@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var path = osxu.RunningBaseDir() + "conf/config_mmo.json"
+var path = osxu.GetRunningDir() + "/conf/config_mmo.json"
 
 func TestParseMMOConfig(t *testing.T) {
 	cfg := ParseMMOConfigByPath(path)
