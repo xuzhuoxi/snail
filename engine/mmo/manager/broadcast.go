@@ -6,8 +6,8 @@
 package manager
 
 import (
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/xuzhuoxi/infra-go/encodingx"
 	"github.com/xuzhuoxi/infra-go/logx"
 	"github.com/xuzhuoxi/infra-go/netx"
