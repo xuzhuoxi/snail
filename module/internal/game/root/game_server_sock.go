@@ -9,6 +9,7 @@ import (
 	"github.com/xuzhuoxi/infra-go/eventx"
 	"github.com/xuzhuoxi/infra-go/extendx/protox"
 	"github.com/xuzhuoxi/infra-go/netx"
+	"github.com/xuzhuoxi/infra-go/netx/tcpx"
 	"github.com/xuzhuoxi/snail/module/config"
 	"github.com/xuzhuoxi/snail/module/imodule"
 	"github.com/xuzhuoxi/snail/module/internal/game/ifc"
@@ -19,7 +20,7 @@ func NewGameSock(cfg config.SockConf, single ifc.IGameSingleCase) *GameSock {
 	container := ifc.NewGameExtensionContainer()
 	injectExtensions(container, single)
 
-	server := netx.NewTCPServer()
+	server := tcpx.NewTCPServer()
 	server.SetName(cfg.Name)
 	server.SetMax(100)
 	server.SetLogger(single.GetLogger())
@@ -32,7 +33,7 @@ func NewGameSock(cfg config.SockConf, single ifc.IGameSingleCase) *GameSock {
 	//mgr.SetAddressProxy(ifc.AddressProxy)
 
 	mgr := NewSnailGameExtensionManager(SockState)
-	mgr.InitManager(server, container)
+	mgr.InitManager(server.GetPackHandlerContainer(), container, server)
 	mgr.SetLogger(single.GetLogger())
 	mgr.SetAddressProxy(ifc.AddressProxy)
 
@@ -41,7 +42,7 @@ func NewGameSock(cfg config.SockConf, single ifc.IGameSingleCase) *GameSock {
 
 type GameSock struct {
 	Conf            config.SockConf
-	Server          netx.ITCPServer
+	Server          tcpx.ITCPServer
 	Container       ifc.IGameExtensionContainer
 	ExtensionMgr    protox.IExtensionManager
 	SockStateDetail *imodule.SockStateDetail
@@ -49,7 +50,7 @@ type GameSock struct {
 
 func (gs *GameSock) Running() bool {
 	if nil != gs.Server {
-		return gs.Server.Running()
+		return gs.Server.IsRunning()
 	} else {
 		return false
 	}
@@ -74,7 +75,7 @@ func (gs *GameSock) SockRun() {
 	gs.Server.AddEventListener(netx.ServerEventConnOpened, gs.onConnOpened)
 	gs.Server.AddEventListener(netx.ServerEventConnClosed, gs.onConnClosed)
 	gs.ExtensionMgr.StartManager()
-	gs.Server.StartServer(netx.SockParams{Network: gs.Conf.Network, LocalAddress: gs.Conf.Addr}) //这里会阻塞
+	gs.Server.StartServer(netx.SockParams{Network: netx.SockNetwork(gs.Conf.Network), LocalAddress: gs.Conf.Addr}) //这里会阻塞
 }
 
 func (gs *GameSock) SockStop() {

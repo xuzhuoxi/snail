@@ -123,6 +123,7 @@ func (m *EntityManager) SetLogger(logger logx.ILogger) {
 }
 
 func (m *EntityManager) ConstructWorld(cfg *config.MMOConfig) {
+	fmt.Println("World:", cfg)
 	mmo := cfg.MMO
 	world, _ := m.CreateWorld(mmo.WorldEntity.Id, mmo.WorldEntity.Name, true)
 	for _, zoneCfg := range mmo.Zones {
@@ -246,7 +247,7 @@ func (m *EntityManager) removeEntityEventListener(entity basis.IEntity) {
 //事件转发
 func (m *EntityManager) onEntityVar(evd *eventx.EventData) {
 	evd.StopImmediatePropagation()
-	m.DispatchEvent(evd.EventType, m, []interface{}{evd.CurrentTarget(), evd.Data}) //[0]为实体目标，[1]为变量
+	m.DispatchEvent(evd.EventType, m, []interface{}{evd.CurrentTarget, evd.Data}) //[0]为实体目标，[1]为变量
 }
 
 //----------------------------

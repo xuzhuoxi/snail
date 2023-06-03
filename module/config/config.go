@@ -3,12 +3,13 @@ package config
 import (
 	"github.com/json-iterator/go"
 	"github.com/xuzhuoxi/infra-go/cmdx"
+	"github.com/xuzhuoxi/infra-go/filex"
 	"github.com/xuzhuoxi/infra-go/osxu"
 	"io/ioutil"
 )
 
 func BaseLogPath() string {
-	return osxu.RunningBaseDir() + "log/"
+	return osxu.GetRunningDir() + "log/"
 }
 
 type SockConf struct {
@@ -31,8 +32,8 @@ type ObjectConf struct {
 func (oc ObjectConf) LogFileInfo() (fileDir string, fileBaseName string, fileExtName string) {
 	fullPath := BaseLogPath() + oc.Log
 	var fileName string
-	fileDir, fileName = osxu.SplitFilePath(fullPath)
-	fileBaseName, fileExtName = osxu.SplitFileName(fileName)
+	fileDir, fileName = filex.Split(fullPath)
+	fileBaseName, _, fileExtName = filex.SplitFileName(fileName)
 	return
 }
 
@@ -100,7 +101,7 @@ func ParseModuleConfig(flagSet *cmdx.FlagSetExtend) *ModuleConfig {
 	if !ok {
 		panic("Params \"-c\" is required! ")
 	}
-	path := osxu.RunningBaseDir() + "conf/" + cfgName
+	path := filex.Combine(osxu.GetRunningDir(), "conf", cfgName)
 	return ParseModuleConfigByPath(path)
 }
 

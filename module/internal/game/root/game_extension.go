@@ -40,15 +40,15 @@ type SnailGameExtensionManager struct {
 func (m *SnailGameExtensionManager) StartManager() {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
-	m.Container.InitExtensions()
-	m.SockServer.GetPackHandlerContainer().AppendPackHandler(m.onSnailGamePack)
+	m.ExtensionContainer.InitExtensions()
+	m.HandlerContainer.AppendPackHandler(m.onSnailGamePack)
 }
 
 func (m *SnailGameExtensionManager) StopManager() {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
-	m.SockServer.GetPackHandlerContainer().ClearHandler(m.onSnailGamePack)
-	m.Container.DestroyExtensions()
+	m.HandlerContainer.ClearHandler(m.onSnailGamePack)
+	m.ExtensionContainer.DestroyExtensions()
 }
 
 func (m *SnailGameExtensionManager) onSnailGamePack(msgData []byte, senderAddress string, other interface{}) bool {

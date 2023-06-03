@@ -7,8 +7,10 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"github.com/json-iterator/go"
 	"github.com/xuzhuoxi/infra-go/cmdx"
+	"github.com/xuzhuoxi/infra-go/filex"
 	"github.com/xuzhuoxi/infra-go/osxu"
 	"io/ioutil"
 )
@@ -123,12 +125,13 @@ func ParseMMOConfigByFlag(flagSet *cmdx.FlagSetExtend) *MMOConfig {
 		return nil
 	}
 	cfgName, _ := flagSet.GetString("mmo")
-	path := osxu.RunningBaseDir() + "conf/" + cfgName
+	path := filex.Combine(osxu.GetRunningDir(), "conf", cfgName)
 	return ParseMMOConfigByPath(path)
 }
 
 func ParseMMOConfigByPath(path string) *MMOConfig {
 	//读取配置文件
+	fmt.Println("Path:", path)
 	cfgBody, err := ioutil.ReadFile(path)
 	if nil != err {
 		panic("mmo does not exist! ")
