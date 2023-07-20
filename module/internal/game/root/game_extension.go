@@ -1,7 +1,7 @@
-//
-//Created by xuzhuoxi
-//on 2019-02-18.
-//@author xuzhuoxi
+// Package rabbit
+// Created by xuzhuoxi
+// on 2019-02-18.
+// @author xuzhuoxi
 //
 package root
 
@@ -52,15 +52,15 @@ func (m *SnailGameExtensionManager) StopManager() {
 }
 
 func (m *SnailGameExtensionManager) onSnailGamePack(msgData []byte, senderAddress string, other interface{}) bool {
-	//m.Logger.Infoln("ExtensionManager.onPack", senderAddress, msgData)
+	//m.Logger.Infoln("ExtManager.onPack", senderAddress, msgData)
 	m.SockStateDetail.AddReqCount()
 	name, pid, uid, data := m.ParseMessage(msgData)
-	extension, ok := m.Verify(name, pid, uid)
-	if !ok {
+	extension, rsCode := m.Verify(name, pid, uid)
+	if rsCode != protox.CodeSuc {
 		return false
 	}
 	//参数处理
-	response, request := m.GenParams(extension, senderAddress, name, pid, uid, data)
+	response, request := m.GetRecycleParams(extension, senderAddress, name, pid, uid, data)
 	defer func() {
 		protox.DefaultRequestPool.Recycle(request)
 		protox.DefaultResponsePool.Recycle(response)

@@ -12,12 +12,12 @@ import (
 )
 
 func NewGameExtensionSupport(Name string) GameExtensionSupport {
-	support := protox.NewProtocolExtensionSupport(Name)
-	return GameExtensionSupport{ProtocolExtensionSupport: support}
+	support := protox.NewProtoExtensionSupport(Name)
+	return GameExtensionSupport{ProtoExtensionSupport: support}
 }
 
 type GameExtensionSupport struct {
-	protox.ProtocolExtensionSupport
+	protox.ProtoExtensionSupport
 	SingleCase ifc.IGameSingleCase
 }
 

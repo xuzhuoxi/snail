@@ -27,8 +27,8 @@ type LoginExtension struct {
 
 func (e *LoginExtension) InitExtension() error {
 	e.GetLogger().Debugln("LoginExtension.InitExtension", e.Name)
-	e.SetRequestHandlerJson(LoginId, e.onRequestLogin)
-	e.SetRequestHandlerJson(ReLoginId, e.onRequestReLogin)
+	e.SetRequestHandlerString(LoginId, e.onRequestLogin)
+	e.SetRequestHandlerString(ReLoginId, e.onRequestReLogin)
 	return nil
 }
 
@@ -39,24 +39,24 @@ func (e *LoginExtension) DestroyExtension() error {
 	return nil
 }
 
-func (e *LoginExtension) onRequestLogin(resp protox.IExtensionJsonResponse, req protox.IExtensionJsonRequest) {
-	password := req.RequestJsonData()[0]
+func (e *LoginExtension) onRequestLogin(resp protox.IExtensionStringResponse, req protox.IExtensionStringRequest) {
+	password := req.RequestStringData()[0]
 	if e.check(req.ClientId(), password) {
 		ifc.AddressProxy.MapIdAddress(req.ClientId(), req.ClientAddress())
 		time.Sleep(time.Millisecond * 20)
-		resp.SendJsonResponse("ok")
+		resp.SendStringResponse("ok")
 		e.GetLogger().Traceln("LoginExtension.onRequestLogin:", "Check Succ!", req.ProtoId(), req.ClientId(), password)
 	} else {
 		e.GetLogger().Warnln("LoginExtension.onRequestLogin:", "Check Fail!", req.ProtoId(), req.ClientId(), password)
 	}
 }
 
-func (e *LoginExtension) onRequestReLogin(resp protox.IExtensionJsonResponse, req protox.IExtensionJsonRequest) {
-	password := req.RequestJsonData()[0]
+func (e *LoginExtension) onRequestReLogin(resp protox.IExtensionStringResponse, req protox.IExtensionStringRequest) {
+	password := req.RequestStringData()[0]
 	if e.check(req.ClientId(), password) {
 		ifc.AddressProxy.MapIdAddress(req.ClientId(), req.ClientAddress())
 		time.Sleep(time.Millisecond * 20)
-		resp.SendJsonResponse("ok")
+		resp.SendStringResponse("ok")
 		e.GetLogger().Traceln("LoginExtension.onRequestReLogin:", "Check Succ!", req.ProtoId(), req.ClientId(), password)
 	} else {
 		e.GetLogger().Warnln("LoginExtension.onRequestReLogin:", "Check Fail!", req.ProtoId(), req.ClientId(), password)

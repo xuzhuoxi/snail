@@ -1,7 +1,7 @@
-//
-//Created by xuzhuoxi
-//on 2019-02-10.
-//@author xuzhuoxi
+// Package imodule
+// Created by xuzhuoxi
+// on 2019-02-10.
+// @author xuzhuoxi
 //
 package imodule
 
@@ -18,15 +18,15 @@ type ISockState interface {
 }
 
 type ISockStateDetail interface {
-	//运行时间
+	// GetPassNano 运行时间
 	GetPassNano() int64
 
-	//当前统计的服务权重(连接数*统计时间/统计响应时间)
-	//越大代表压力越大
+	// StatsWeight 当前统计的服务权重(连接数*统计时间/统计响应时间)
+	// 越大代表压力越大
 	StatsWeight() float64
 
-	//响应系数(响应总时间 / (统计总时间 * 逻辑cpu数)),
-	//注意：结果正常设置下为[0,1]
+	// RespCoefficient 响应系数(响应总时间 / (统计总时间 * 逻辑cpu数)),
+	// 注意：结果正常设置下为[0,1]
 	RespCoefficient() float64
 	//平均响应时间(响应总时间/响应次数)
 	RespAvgTime() float64

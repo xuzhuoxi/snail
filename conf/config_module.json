@@ -4,6 +4,7 @@
     {"name": "rpc_game0", "network": "tcp", "addr": "127.0.0.1:41000"},
     {"name": "rpc_game1", "network": "tcp", "addr": "127.0.0.1:42000"},
     {"name": "rpc_game2", "network": "tcp", "addr": "127.0.0.1:43000"},
+
     {"name": "out_route0", "network": "http", "addr": "127.0.0.1:30000"},
     {"name": "out_game0", "network": "tcp", "addr": "127.0.0.1:31000"},
     {"name": "out_game1", "network": "tcp", "addr": "127.0.0.1:32000"},

@@ -123,7 +123,7 @@ func (m *EntityManager) SetLogger(logger logx.ILogger) {
 }
 
 func (m *EntityManager) ConstructWorld(cfg *config.MMOConfig) {
-	fmt.Println("World:", cfg)
+	fmt.Println("WorldId:", cfg)
 	mmo := cfg.MMO
 	world, _ := m.CreateWorld(mmo.WorldEntity.Id, mmo.WorldEntity.Name, true)
 	for _, zoneCfg := range mmo.Zones {

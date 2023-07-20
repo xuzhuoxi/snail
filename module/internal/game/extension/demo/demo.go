@@ -15,6 +15,10 @@ func NewDemoExtension(Name string) *DemoExtension {
 	return &DemoExtension{GameExtensionSupport: extension.NewGameExtensionSupport(Name)}
 }
 
+func NewOrigin() interface{} {
+	return &originObj{}
+}
+
 type originObj struct {
 	Data  int
 	Data2 string
@@ -55,8 +59,8 @@ func (e *DemoExtension) InitExtension() error {
 	e.GetLogger().Debugln("DemoExtension.InitExtension", e.Name)
 	e.SetRequestHandler("N_0", e.onRequestNoneParam)
 	e.SetRequestHandlerBinary("B_0", e.onRequestBinary)
-	e.SetRequestHandlerJson("J_0", e.onRequestJson)
-	e.SetRequestHandlerObject("Obj_0", e.onRequestObj, originObj{}, &paramHandler{})
+	e.SetRequestHandlerString("J_0", e.onRequestJson)
+	e.SetRequestHandlerObject("Obj_0", e.onRequestObj, NewOrigin, nil)
 	return nil
 }
 
@@ -79,7 +83,7 @@ func (e *DemoExtension) onRequestBinary(resp protox.IExtensionBinaryResponse, re
 	e.GetLogger().Debugln("DemoExtension.onRequestBinary!", req, resp)
 }
 
-func (e *DemoExtension) onRequestJson(resp protox.IExtensionJsonResponse, req protox.IExtensionJsonRequest) {
+func (e *DemoExtension) onRequestJson(resp protox.IExtensionStringResponse, req protox.IExtensionStringRequest) {
 	e.GetLogger().Debugln("DemoExtension.onRequestJson!", req, resp)
 }
 
