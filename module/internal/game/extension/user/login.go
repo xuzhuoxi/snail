@@ -40,7 +40,7 @@ func (e *LoginExtension) DestroyExtension() error {
 }
 
 func (e *LoginExtension) onRequestLogin(resp protox.IExtensionStringResponse, req protox.IExtensionStringRequest) {
-	password := req.RequestStringData()[0]
+	password := req.StringData()[0]
 	if e.check(req.ClientId(), password) {
 		ifc.AddressProxy.MapIdAddress(req.ClientId(), req.ClientAddress())
 		time.Sleep(time.Millisecond * 20)
@@ -52,7 +52,7 @@ func (e *LoginExtension) onRequestLogin(resp protox.IExtensionStringResponse, re
 }
 
 func (e *LoginExtension) onRequestReLogin(resp protox.IExtensionStringResponse, req protox.IExtensionStringRequest) {
-	password := req.RequestStringData()[0]
+	password := req.StringData()[0]
 	if e.check(req.ClientId(), password) {
 		ifc.AddressProxy.MapIdAddress(req.ClientId(), req.ClientAddress())
 		time.Sleep(time.Millisecond * 20)
